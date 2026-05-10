@@ -1,6 +1,8 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 /**
  * Analyzes data characteristics of the three candidate datasets.
@@ -10,22 +12,30 @@ import java.io.IOException;
 public class DataAnalyzer {
 
     private static final String DATA_DIR = "Group Project Datasets";
+    private static final String OUTPUT_DIR = "output";
     private static final String[] DATASETS = {"candidates_A.csv", "candidates_B.csv", "candidates_C.csv"};
 
     public static void main(String[] args) {
-        System.out.println("==============================================");
-        System.out.println("  Data Characteristics Analysis");
-        System.out.println("==============================================\n");
+        StringBuilder report = new StringBuilder();
+        report.append("==============================================\n");
+        report.append("  Data Characteristics Analysis\n");
+        report.append("==============================================\n\n");
 
         for (int d = 0; d < DATASETS.length; d++) {
             String filePath = DATA_DIR + "/" + DATASETS[d];
             Location[] data = readCSV(filePath);
-            System.out.println("──────────────────────────────────────────────");
-            System.out.println("  Dataset " + (char)('A' + d) + ": " + DATASETS[d]);
-            System.out.println("──────────────────────────────────────────────");
-            analyze(data);
-            System.out.println();
+            report.append("──────────────────────────────────────────────\n");
+            report.append("  Dataset ").append((char)('A' + d)).append(": ").append(DATASETS[d]).append("\n");
+            report.append("──────────────────────────────────────────────\n");
+            analyze(data, report);
+            report.append("\n");
         }
+
+        // Print to console
+        System.out.print(report.toString());
+
+        // Write to file
+        exportReport(report.toString());
     }
 
     private static Location[] readCSV(String filePath) {
@@ -56,7 +66,7 @@ public class DataAnalyzer {
         return locations;
     }
 
-    private static void analyze(Location[] data) {
+    private static void analyze(Location[] data, StringBuilder sb) {
         // ---- Basic Statistics ----
         int n = data.length;
         int minScore = Integer.MAX_VALUE, maxScore = Integer.MIN_VALUE;
@@ -76,12 +86,12 @@ public class DataAnalyzer {
 
         double mean = (double) sum / n;
 
-        System.out.println("  Basic Statistics:");
-        System.out.println("    Total locations : " + n);
-        System.out.println("    Score range      : " + minScore + " ~ " + maxScore);
-        System.out.println("    Mean score       : " + String.format("%.2f", mean));
-        System.out.println("    Location ID range: L" + String.format("%04d", minId) +
-                " ~ L" + String.format("%04d", maxId));
+        sb.append("  Basic Statistics:\n");
+        sb.append("    Total locations : ").append(n).append("\n");
+        sb.append("    Score range      : ").append(minScore).append(" ~ ").append(maxScore).append("\n");
+        sb.append("    Mean score       : ").append(String.format("%.2f", mean)).append("\n");
+        sb.append("    Location ID range: L").append(String.format("%04d", minId))
+          .append(" ~ L").append(String.format("%04d", maxId)).append("\n");
 
         // ---- Score Distribution ----
         int[] scoreFrequency = new int[maxScore - minScore + 1];
@@ -100,13 +110,13 @@ public class DataAnalyzer {
             }
         }
 
-        System.out.println("    Unique scores    : " + uniqueScores);
-        System.out.println("    Most frequent    : score " + maxFreqScore +
-                " appears " + maxFreq + " times");
+        sb.append("    Unique scores    : ").append(uniqueScores).append("\n");
+        sb.append("    Most frequent    : score ").append(maxFreqScore)
+          .append(" appears ").append(maxFreq).append(" times\n");
 
         // ---- Initial Order Analysis ----
-        int descViolations = 0;     // violations of descending order (adjacent)
-        int ascViolations = 0;      // violations of ascending order (adjacent)
+        int descViolations = 0;
+        int ascViolations = 0;
 
         for (int i = 0; i < n - 1; i++) {
             int curr = data[i].getPriorityScore();
@@ -118,19 +128,21 @@ public class DataAnalyzer {
         double descSortedness = (1.0 - (double) descViolations / (n - 1)) * 100;
         double ascSortedness = (1.0 - (double) ascViolations / (n - 1)) * 100;
 
-        System.out.println("\n  Initial Order Analysis:");
-        System.out.println("    Descending order : " + String.format("%.1f%%", descSortedness) +
-                " sorted (" + descViolations + " violations out of " + (n - 1) + " adjacent pairs)");
-        System.out.println("    Ascending order  : " + String.format("%.1f%%", ascSortedness) +
-                " sorted (" + ascViolations + " violations out of " + (n - 1) + " adjacent pairs)");
+        sb.append("\n  Initial Order Analysis:\n");
+        sb.append("    Descending order : ").append(String.format("%.1f%%", descSortedness))
+          .append(" sorted (").append(descViolations).append(" violations out of ")
+          .append(n - 1).append(" adjacent pairs)\n");
+        sb.append("    Ascending order  : ").append(String.format("%.1f%%", ascSortedness))
+          .append(" sorted (").append(ascViolations).append(" violations out of ")
+          .append(n - 1).append(" adjacent pairs)\n");
 
         // ---- Inversion Count (for first 200 elements as sample) ----
         int sampleSize = Math.min(n, 200);
         long inversions = countInversionsSample(data, sampleSize);
         long maxPossible = (long) sampleSize * (sampleSize - 1) / 2;
         double inversionDensity = (double) inversions / maxPossible * 100;
-        System.out.println("    Inversions (first " + sampleSize + " items) : " + inversions +
-                " (" + String.format("%.1f%%", inversionDensity) + " of max possible)");
+        sb.append("    Inversions (first ").append(sampleSize).append(" items) : ").append(inversions)
+          .append(" (").append(String.format("%.1f%%", inversionDensity)).append(" of max possible)\n");
 
         // ---- Initial Order Classification ----
         String orderType;
@@ -143,7 +155,7 @@ public class DataAnalyzer {
         } else {
             orderType = "PARTIALLY SORTED";
         }
-        System.out.println("    Classification  : " + orderType);
+        sb.append("    Classification  : ").append(orderType).append("\n");
 
         // ---- Duplicate / Tie Analysis ----
         int totalTies = 0;
@@ -155,12 +167,12 @@ public class DataAnalyzer {
             }
         }
 
-        System.out.println("\n  Tie Analysis:");
-        System.out.println("    Score groups with ties : " + tieGroups);
-        System.out.println("    Locations sharing a score: " + totalTies +
-                " (" + String.format("%.1f%%", (double) totalTies / n * 100) + " of data)");
+        sb.append("\n  Tie Analysis:\n");
+        sb.append("    Score groups with ties : ").append(tieGroups).append("\n");
+        sb.append("    Locations sharing a score: ").append(totalTies)
+          .append(" (").append(String.format("%.1f%%", (double) totalTies / n * 100)).append(" of data)\n");
 
-        // ---- Consistency across dataset (variance of gaps) ----
+        // ---- Score Gap Analysis ----
         long gapSum = 0;
         int gapCount = 0;
         for (int i = 0; i < n - 1; i++) {
@@ -171,9 +183,22 @@ public class DataAnalyzer {
             }
         }
         double avgGap = gapCount > 0 ? (double) gapSum / gapCount : 0;
-        System.out.println("\n  Score Gap Analysis:");
-        System.out.println("    Avg gap between distinct adjacent scores: " +
-                String.format("%.2f", avgGap));
+        sb.append("\n  Score Gap Analysis:\n");
+        sb.append("    Avg gap between distinct adjacent scores: ")
+          .append(String.format("%.2f", avgGap)).append("\n");
+    }
+
+    private static void exportReport(String content) {
+        java.io.File outputDir = new java.io.File(OUTPUT_DIR);
+        outputDir.mkdirs();
+
+        String filePath = OUTPUT_DIR + "/data_analysis_report.txt";
+        try (PrintWriter pw = new PrintWriter(new FileWriter(filePath))) {
+            pw.print(content);
+            System.out.println("[Export] Data analysis report saved to: " + filePath);
+        } catch (IOException e) {
+            System.err.println("Error exporting data analysis report: " + e.getMessage());
+        }
     }
 
     /**

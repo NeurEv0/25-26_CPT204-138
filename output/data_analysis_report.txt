@@ -1,0 +1,76 @@
+==============================================
+  Data Characteristics Analysis
+==============================================
+
+──────────────────────────────────────────────
+  Dataset A: candidates_A.csv
+──────────────────────────────────────────────
+  Basic Statistics:
+    Total locations : 1000
+    Score range      : 9001 ~ 10000
+    Mean score       : 9500.50
+    Location ID range: L0001 ~ L1000
+    Unique scores    : 1000
+    Most frequent    : score 9001 appears 1 times
+
+  Initial Order Analysis:
+    Descending order : 98.3% sorted (17 violations out of 999 adjacent pairs)
+    Ascending order  : 1.7% sorted (982 violations out of 999 adjacent pairs)
+    Inversions (first 200 items) : 11 (0.1% of max possible)
+    Classification  : NEARLY SORTED DESCENDING
+
+  Tie Analysis:
+    Score groups with ties : 0
+    Locations sharing a score: 0 (0.0% of data)
+
+  Score Gap Analysis:
+    Avg gap between distinct adjacent scores: 1.03
+
+──────────────────────────────────────────────
+  Dataset B: candidates_B.csv
+──────────────────────────────────────────────
+  Basic Statistics:
+    Total locations : 1000
+    Score range      : 9001 ~ 10000
+    Mean score       : 9500.50
+    Location ID range: L0001 ~ L1000
+    Unique scores    : 1000
+    Most frequent    : score 9001 appears 1 times
+
+  Initial Order Analysis:
+    Descending order : 49.1% sorted (508 violations out of 999 adjacent pairs)
+    Ascending order  : 50.9% sorted (491 violations out of 999 adjacent pairs)
+    Inversions (first 200 items) : 9786 (49.2% of max possible)
+    Classification  : RANDOM / UNSORTED
+
+  Tie Analysis:
+    Score groups with ties : 0
+    Locations sharing a score: 0 (0.0% of data)
+
+  Score Gap Analysis:
+    Avg gap between distinct adjacent scores: 330.12
+
+──────────────────────────────────────────────
+  Dataset C: candidates_C.csv
+──────────────────────────────────────────────
+  Basic Statistics:
+    Total locations : 1000
+    Score range      : 4951 ~ 5000
+    Mean score       : 4970.99
+    Location ID range: L0001 ~ L1000
+    Unique scores    : 41
+    Most frequent    : score 4952 appears 25 times
+
+  Initial Order Analysis:
+    Descending order : 100.0% sorted (0 violations out of 999 adjacent pairs)
+    Ascending order  : 96.0% sorted (40 violations out of 999 adjacent pairs)
+    Inversions (first 200 items) : 1109 (5.6% of max possible)
+    Classification  : NEARLY SORTED DESCENDING
+
+  Tie Analysis:
+    Score groups with ties : 41
+    Locations sharing a score: 1000 (100.0% of data)
+
+  Score Gap Analysis:
+    Avg gap between distinct adjacent scores: 1.23
+
