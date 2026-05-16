@@ -34,20 +34,36 @@ public class SortingAlgorithms {
     }
 
     private static int partition(Location[] arr, int low, int high) {
-        Location pivot = arr[high];
-        int i = low - 1;
-        for (int j = low; j < high; j++) {
-            if (arr[j].compareTo(pivot) <= 0) {
-                i++;
-                Location temp = arr[i];
-                arr[i] = arr[j];
-                arr[j] = temp;
+        Location pivot = arr[low]; // Use first element as pivot
+        int left = low + 1;        // Forward search index
+        int right = high;          // Backward search index
+
+        while (right > left) {
+            // Scan forward to find element greater than pivot
+            while (left <= right && arr[left].compareTo(pivot) <= 0)
+                left++;
+            // Scan backward to find element less than or equal to pivot
+            while (left <= right && arr[right].compareTo(pivot) > 0)
+                right--;
+            // Swap the two out-of-place elements
+            if (right > left) {
+                Location temp = arr[left];
+                arr[left] = arr[right];
+                arr[right] = temp;
             }
         }
-        Location temp = arr[i + 1];
-        arr[i + 1] = arr[high];
-        arr[high] = temp;
-        return i + 1;
+
+        // Move pivot into its final sorted position
+        while (right > low && arr[right].compareTo(pivot) >= 0)
+            right--;
+
+        if (pivot.compareTo(arr[right]) > 0) {
+            arr[low] = arr[right];
+            arr[right] = pivot;
+            return right;
+        } else {
+            return low;
+        }
     }
 
     // ---- Merge Sort ----
