@@ -120,11 +120,7 @@ The initial order has a profound and algorithm-specific effect on performance.
 
 **Dataset C — Merge Sort (298,233 ns).** Despite the data being perfectly sorted by score, the 41 distinct score groups each require internal sorting by location ID. Merge Sort handles equal elements stably and efficiently within its merge step. Quick Sort degrades due to imbalanced pivot splits on equal-valued sequences. Bubble Sort must perform many within-group swaps and cannot fully exploit its early-exit flag, leaving it 6× slower than Merge Sort.
 
-#### 1.5.3 Which algorithm behaves most consistently across the three datasets?
-
-**Merge Sort** is the most consistent. Its three runtimes span from 0.298 ms to 1.848 ms — a ratio of about 6×, and the variation is attributable to natural differences in the volume of merge-step work, not algorithmic degradation. Bubble Sort varies by a factor of 31× (0.421 ms to 13.076 ms) and Quick Sort by 4× (1.871 ms to 7.710 ms), but Quick Sort's worst case (Dataset A) is already approaching quadratic. The theoretical guarantee of O(n log n) in all cases is what gives Merge Sort its stable profile.
-
-#### 1.5.4 If only one sorting algorithm could be used in the final system, which would you choose?
+#### 1.5.3 If only one sorting algorithm could be used in the final system, which would you choose?
 
 The best single choice would be **Merge Sort**, and the justification depends on the evaluation criterion:
 
@@ -134,414 +130,183 @@ The best single choice would be **Merge Sort**, and the justification depends on
 
 Merge Sort strikes the best balance: its O(n log n) guarantee eliminates worst-case surprises regardless of how future data arrives, its stability correctly handles tie-breaking (equal-score locations are kept in their original order before location-ID ordering is applied), and its performance is already competitive or best on two of the three datasets. For an infrastructure inspection system where reliability and predictability matter, algorithmic stability outweighs the slight average-case speed advantage Quick Sort offers on random data.
 
-#### 1.5.5 If the number of candidate locations became significantly larger, which algorithm would be most suitable?
+#### 1.5.4 If the number of candidate locations became significantly larger, which algorithm would be most suitable?
 
 With significantly more locations (e.g., tens or hundreds of thousands), **Merge Sort or Quick Sort** with an improved pivot strategy would be appropriate; Bubble Sort must be ruled out entirely. At 10,000 locations, Bubble Sort's O(n²) would take roughly 100× longer than at 1,000 — extrapolating from Dataset B, this reaches around 1.3 seconds per sort, which is unacceptable in an interactive system.
 
 Between the two O(n log n) options, **Quick Sort with randomised or median-of-three pivot selection** would be preferable for very large datasets due to its in-place nature (O(log n) stack space) and superior cache locality. The current first-element pivot strategy would need to be replaced to avoid worst-case degradation on sorted inputs. If stability is required (as it is here, to preserve tie-breaking determinism), Merge Sort remains the safer choice despite its O(n) auxiliary space cost.
 
-#### 1.5.6 If both runtime efficiency and memory usage are considered, how would your algorithm choice be affected?
+#### 1.5.5 If both runtime efficiency and memory usage are considered, how would your algorithm choice be affected?
 
 Factoring in memory narrows the choice to **Quick Sort (with improved pivot selection)**. Merge Sort allocates O(n) auxiliary arrays during the merge phase — at 1,000 locations this is negligible, but at millions of locations these temporary arrays can put significant pressure on the heap, potentially triggering garbage collection pauses in Java. Quick Sort is in-place, using only O(log n) stack space for recursion frames. However, the trade-off is stability: Quick Sort as implemented is not stable, so tie-breaking by location ID would rely solely on the `compareTo` comparison rather than insertion order. Since `compareTo` already encodes the location ID as a secondary key, correctness is maintained, but the developer must ensure this is always the case when the algorithm is modified or reused. In a memory-constrained environment, an in-place O(n log n) Quick Sort with randomised pivot is therefore the preferred solution.
 
-### 1.6 Conclusion
+#### 1.6 Most Suitable Algorithm for the Inspection System
 
+Drawing together the timing data, dataset characteristics, and the five individual analyses above, **Merge Sort** is the most suitable single sorting algorithm for this Urban Infrastructure Inspection System. The conclusion rests on four distinct but complementary perspectives.
+
+**Runtime stability.** The most damaging property a sorting algorithm can have in a production system is unpredictable performance — a fast result on typical data but a catastrophic slowdown on an edge case. Quick Sort (first-element pivot) demonstrated exactly this: 1.87 ms on random Dataset B but 7.71 ms on nearly sorted Dataset A — a 4× swing attributable to pivot-induced imbalance. Bubble Sort is even more extreme: its 31× range (0.421 ms to 13.076 ms) reflects a fundamental O(n²) ceiling that activates the moment early termination fails. Merge Sort's range — 0.298 ms to 1.848 ms, a ratio of approximately 6× — is larger in absolute nanoseconds but entirely explained by the differing volume of merge-step comparisons across input orders; it never approaches quadratic behaviour. When future candidate datasets arrive from sources with unknown orderings, Merge Sort's O(n log n) guarantee ensures that sorting time remains bounded and predictable regardless.
+
+**Scalability.** At 1,000 locations the differences between algorithms are measured in milliseconds and are not user-perceptible. The meaningful question is what happens when the city's inspection database grows. At 10,000 locations, Bubble Sort's quadratic growth projects its Dataset B time of 13 ms to approximately 1.3 seconds per sort — unacceptable in a system expected to rank and route in near-real time. Quick Sort with the current pivot strategy similarly risks O(n²) whenever new datasets happen to arrive nearly sorted. Merge Sort's time grows as n log n: at 10,000 locations, the Dataset B time of 1.85 ms scales to roughly 21 ms; at 100,000 locations, to approximately 260 ms. This predictable sub-linear per-element growth makes Merge Sort the only one of the three algorithms whose scalability is safe to rely on without algorithm modification.
+
+**Memory usage.** The trade-off that Merge Sort pays for its guaranteed complexity is O(n) auxiliary space — the temporary arrays allocated during each merge step. At 1,000 locations this is fewer than 8 KB of heap memory and entirely negligible. Even at 1,000,000 locations the auxiliary allocation would be roughly 8 MB, which is well within the heap available to a modern JVM. By contrast, Quick Sort requires only O(log n) stack space for recursion frames and is classified as in-place. If the system were ever deployed on an embedded device with severely constrained memory (a scenario outside the current scope), the O(n) cost of Merge Sort would warrant reconsideration in favour of an improved-pivot Quick Sort. Within the realistic scale of a city's infrastructure database, however, the memory difference is not a practical concern, and the stability guarantee Merge Sort provides justifies the space overhead.
+
+**Sort stability.** Merge Sort is a *stable* sort: when two elements compare as equal, their relative order in the output matches their relative order in the input. This property has a concrete impact on correctness in this system. Dataset C contains 1,000 locations that all share one of only 41 distinct priority scores; the tie-breaking rule requires that equal-score locations be ordered by ascending location ID. Merge Sort's stability means that if the input were pre-arranged by location ID, the merge step would naturally preserve that order within equal-score groups, correctly resolving every tie. While the implementation of `Location.compareTo` already encodes the secondary key explicitly — so all three algorithms ultimately produce the same correct result when the comparator is complete — Merge Sort's stability offers an additional layer of robustness: its correctness on ties does not depend solely on the completeness of the comparator, making it easier to audit and safer to maintain when the ranking rule is extended in the future.
+
+Taken together, Merge Sort provides the best combination of predictable performance, safe scalability, acceptable memory cost, and inherent correctness on tied data — making it the recommended algorithm for the Urban Infrastructure Inspection System.
 
 ## Chapter 2 – Graph Algorithm (Task B)
 
 ### 2.1 Overview
 
-After Task A, we obtain **30 inspection targets** (the top 10 by priority from datasets A, B, and C). Task B solves shortest paths on the **undirected weighted graph** defined in `paths.csv`: each edge has a positive integer weight, and nodes are labelled. The graph has about **1000 nodes** and just over two thousand undirected edges. The 30 targets are only important nodes in the full graph; start, end, and waypoints for Cases 1–4 are chosen from them. **Search runs on the full graph**, not on a subgraph induced by those 30 nodes alone.
+After Task A yields 30 inspection targets — the top 10 highest-priority locations from each of the three candidate datasets — Task B uses those targets as the starting point, destination, and waypoints for four shortest-path queries on the city’s infrastructure network. The network is described in `paths.csv` as an undirected weighted graph: each row specifies two location IDs and the positive integer distance between them. The graph contains approximately 1,000 nodes and just over 2,000 undirected edges. Critically, the 30 Task A targets are important nodes *within* this full graph, not the only nodes in it — shortest paths may pass through any location in the network, regardless of whether it appears in the candidate lists.
 
-### 2.2 Construction of Weighted Graph
+The graph algorithm workflow in `TaskBRunner` is triggered by `InspectionSystem.main()` immediately after `TaskARunner.run()` returns the selected targets as a `Location[][]` array. No intermediate CSV file is re-read; the two tasks communicate directly through Java method calls.
 
-### 2.3 Application of Graph Algorithm
+### 2.2 Graph Construction
 
-### 2.4 Query Handling and Output
+The construction process unfolds in two stages, implemented in separate classes to keep domain logic and I/O cleanly separated.
+
+In the first stage, `GraphLoader.load()` reads each row of `paths.csv` and calls `graph.addEdge(from, to, weight)` on a `Graph` object. Because the network is undirected, `addEdge` inserts two directed `Edge` objects — one in each direction — into a `HashMap<String, List<Edge>>` adjacency list. After this step every location is a key in the map and every connection is reachable from both endpoints.
+
+The second stage converts the string-keyed adjacency list into an integer-indexed representation via `GraphIndex.fromGraph(graph)`. All location IDs are sorted lexicographically, mapped to consecutive integers from 0 to n−1, and stored in two parallel arrays: `neighborIds[i][]` and `neighborWeights[i][]`. This conversion happens once at startup and is shared by all subsequent queries. The benefit is that the inner loop of the shortest-path algorithm works entirely with primitive `int` array accesses rather than `HashMap` lookups and object comparisons — a significant constant-factor improvement on a graph this size. The `Graph` class itself retains the string-keyed representation for readability and debugging; `GraphIndex` provides the performance-critical view needed by `OptimizedDijkstraAlgorithm`.
+
+One `OptimizedDijkstraAlgorithm` instance is created after `GraphIndex` is built. Its internal arrays (`distForward`, `distBackward`, `parentForward`, `parentBackward`) are allocated once and reused across all seven segment queries via `resetSearchState()`, avoiding repeated heap allocation.
+
+### 2.3 Algorithm: Bidirectional Dijkstra
+
+The algorithm used is **Bidirectional Dijkstra**, implemented in `OptimizedDijkstraAlgorithm`. Standard (unidirectional) Dijkstra’s algorithm maintains a priority queue of candidate nodes sorted by tentative distance, expanding the closest node at each step until the destination is settled. Bidirectional Dijkstra runs two simultaneous Dijkstra frontiers: one forward from the source and one backward from the destination. At each step, the side with the smaller current heap-top distance is expanded. When the two frontiers meet at a node — meaning that node has been reached from both sides — the algorithm records the total path cost through that meeting point as a candidate for the shortest path. The main loop terminates as soon as the sum of the two frontiers’ smallest pending distances meets or exceeds the best meeting-point cost found so far, since no better path can then be discovered.
+
+This termination condition is implemented as `(long) forwardBest + (long) backwardBest >= bestDistance`, where the `long` cast prevents integer overflow when both distances are large. A lazy deletion strategy is used with the priority queues: because a node may be inserted multiple times as its tentative distance is improved, stale entries are discarded by comparing the popped distance to the current known distance before processing. Path reconstruction traces the forward parent array from the meeting point back to the source (then reverses), and the backward parent array forward from the meeting point to the destination, joining the two halves into a single complete path.
+
+Waypoint-constrained queries (Cases 3 and 4) are handled by decomposing each case into a sequence of point-to-point segments. For Case 3, the route L0001 → L0105 → L0101 is split into two calls: `findShortestPath(L0001, L0105)` and `findShortestPath(L0105, L0101)`. The path segments are concatenated — dropping the duplicate node at each join — and the total cost is the sum of segment costs. This decomposition is managed by `TaskBRunner.solveCase()` using the `PathCase` inner class, which encodes the ordered list of route points for each case. Two JVM warm-up runs are executed before each timed measurement to reduce cold-start bias from the JIT compiler.
+
+**Why Bidirectional Dijkstra is appropriate.** The infrastructure graph has positive integer edge weights, which is the fundamental requirement for Dijkstra correctness — a settled node’s distance is final because no negative edge can later produce a shorter path through an unsettled node. All four query cases are source-to-sink shortest-path queries (or decompose cleanly into them), which is precisely the query shape bidirectional Dijkstra is designed for. The graph contains no node coordinates, so a heuristic-guided approach such as A* is not directly applicable without an additional data source. At the scale of approximately 1,000 nodes and 2,000 edges, the O(m log n) per-query cost is measured in tenths of a millisecond (see §2.4), making the algorithm well-matched to the problem in both correctness and performance.
+
+**Complexity.** Let *n* be the number of locations (nodes) and *m* be the number of undirected edges. The cost of each phase of the workflow is summarised below.
+
+| Phase | Time complexity | Space complexity | Notes |
+|---|---|---|---|
+| Graph construction (`GraphLoader.load` + `GraphIndex.fromGraph`) | O(m) | O(n + m) | One-time startup cost, regardless of how many queries follow |
+| Single `findShortestPath` call | O(m log n) | O(n) | Each edge relaxed a constant number of times; each relaxation costs O(log n) for a priority-queue insertion |
+| Case with *k* segments | O(k · m log n) | O(n) | The algorithm object — and its distance/parent arrays — is shared across all segments |
+
+The O(m log n) per-query bound arises because each edge is relaxed a constant number of times in the worst case, and each relaxation may insert one entry into a priority queue of size O(n), costing O(log n) per insertion. The O(n) per-query space covers the four distance/parent arrays and the two priority queues, all allocated once in the constructor and reused — so a multi-segment case adds time linearly in *k* but does not multiply the space cost.
+
+### 2.4 Required Output: Cases 1–4
+
+The program defines four query cases from the Task A targets. The named nodes are: a1 = L0001 (1st of Dataset A), a10 = L0010 (10th of Dataset A), b1 = L0101 (1st of Dataset B), b5 = L0105 (5th of Dataset B), c1 = L0201 (1st of Dataset C), and c5 = L0205 (5th of Dataset C).
+
+| Case | Start | Destination | Waypoints (in order) | Path segments | Total cost | Search time |
+|---|---|---|---|---|---|---|
+| 1 | L0001 | L0001 | — | L0001 (trivial) | **0** | 0.001 ms |
+| 2 | L0001 | L0010 | — | L0001 → … → L0010 | **27** | 0.141 ms |
+| 3 | L0001 | L0101 | L0105 | L0001→L0105 (cost 22) → L0101 (cost 17) | **39** | 0.133 ms |
+| 4 | L0001 | L0201 | L0105, then L0205 | L0001→L0105 (22) → L0205 (18) → L0201 (8) | **48** | 0.169 ms |
+
+Case 1 is the self-to-self query: the algorithm detects that start and destination share the same node ID and returns a zero-cost single-node path immediately, without entering the main search loop. Case 2 is a direct point-to-point query over the full graph. Cases 3 and 4 are waypoint-constrained queries: each is decomposed into two or three consecutive segment queries, whose paths are concatenated and costs summed. The total search time across all seven segments is **0.443 ms**. Full path sequences (the complete ordered list of intermediate nodes) are produced by the program at runtime and are included in the Appendix.
 
 ### 2.5 Analysis and Discussion
-#### 2.5.1 Which graph algorithm is used? Is it suitable for the weighted graph in this assignment?
-##### 2.5.1.1 What we use and why it fits
 
-###### What we use
+#### 2.5.1 Algorithm suitability for this weighted graph
 
-The program uses **bidirectional Dijkstra**, implemented in `OptimizedDijkstraAlgorithm` and invoked from `TaskB`.
+The central requirement for any correct shortest-path algorithm on a weighted graph is that all edge weights are non-negative. `paths.csv` contains only positive integer weights, which satisfies this requirement. Dijkstra’s algorithm — and by extension, its bidirectional variant — can guarantee that once a node is settled (i.e., removed from the priority queue with its minimum distance confirmed), no future relaxation will find a shorter path to it. This guarantee would break immediately if any edge had a negative weight, because a settled node might be reached more cheaply later via a negative edge.
 
-- **Bidirectional search:** Relax edges outward from both the start and the end following Dijkstra’s rule. When the two frontiers **meet** at a node, we obtain the shortest-path length for that pair; the path is rebuilt from predecessor arrays. The main loop stops early when `forwardBest + backwardBest ≥ bestDistance`, and the side with the smaller heap top is expanded first so the two frontiers stay balanced.
-- **Implementation notes:** `GraphIndex` maps nodes to integer ids; distances and predecessors are stored in `int[]`. One `OptimizedDijkstraAlgorithm` is created at startup; each segment query reuses buffers via `resetSearchState()`. The priority queues use a lazy strategy to skip stale heap entries (see §2.3).
+Bidirectional Dijkstra is particularly well suited to the query structure of Task B for two reasons. First, every case specifies both a source and a destination (or decomposes into segments where both endpoints are known), which is exactly the source-sink query shape that bidirectional search is designed to exploit — by expanding from both ends simultaneously, it can confirm the optimal path length earlier than a unidirectional search and terminate with fewer node expansions. Second, the graph contains no spatial coordinates, which means there is no admissible heuristic available to guide an A* search without additional data. Bidirectional Dijkstra requires only edge weights and graph topology, matching the data format of `paths.csv` exactly.
 
-###### Why it fits this assignment
+#### 2.5.2 Implementation and complexity
 
-Task B requires, on the network in `paths.csv`, the **shortest path, total cost, and search time** for four fixed route scenarios. Bidirectional Dijkstra aligns with the graph type, query shape, and program goals as follows.
+The implementation separates concerns across four classes. `GraphLoader` handles CSV reading; `Graph` represents the domain model as an adjacency list; `GraphIndex` provides the integer-indexed, array-backed view used during search; and `OptimizedDijkstraAlgorithm` implements the bidirectional search logic itself. This separation means each class can be tested, modified, or replaced independently — for example, a different graph format could be supported by changing only `GraphLoader`, without touching the search algorithm.
 
-**(1) Weighted undirected graph — suitable for Dijkstra’s family**
+Within `OptimizedDijkstraAlgorithm`, three design choices reduce constant-factor overhead. First, the four distance and parent arrays (`distForward`, `distBackward`, `parentForward`, `parentBackward`) are allocated once in the constructor and reset between queries with `Arrays.fill`, avoiding repeated allocation for each of the seven segment calls. Second, the integer-indexed `GraphIndex` replaces string-keyed hash-map lookups with direct array accesses in the inner relaxation loop. Third, lazy deletion — skipping priority-queue entries whose recorded distance no longer matches the current known distance — avoids the cost of a decrease-key operation while still maintaining correctness.
 
-`paths.csv` describes **undirected** links between nodes with **positive integer** weights. In Case 2, the optimal route from L0001 to L0010 has cost 27, showing that the shortest route is determined by the **sum of edge weights**. Dijkstra (including bidirectional variants) requires non-negative weights; when a node is expanded after skipping stale heap entries, its distance is final, yielding an **exact optimum** on this data.
+The complexity bounds established in §2.3 — O(m log n) per `findShortestPath` call, O(n) per-query space, and O(m) one-time graph construction — match standard Dijkstra in the worst case. The bidirectional pruning condition reduces the number of nodes actually expanded in practice (as confirmed by the sub-millisecond timings in §2.4) but does not improve the asymptotic bound; its benefit is purely in the constant factor. The three design choices listed above — reused arrays, integer indexing, and lazy deletion — likewise leave the asymptotic complexity unchanged but visibly shrink the constant, which is why each of the seven segment queries completes in well under half a millisecond despite a non-trivial graph size.
 
-**(2) The assignment asks for shortest paths between given start and end — naturally source–sink queries**
+#### 2.5.3 Local optimality versus global optimality
 
-All four cases reduce to several shortest-path queries from node A to node B:
+Each call to `findShortestPath(from, to)` returns the globally shortest path between those two nodes on the full graph — this is guaranteed by the correctness of Dijkstra’s algorithm on non-negative weights. For Cases 3 and 4, which impose a fixed waypoint order, the sum of the individually optimal segment costs is also the globally optimal cost for that constrained route. This holds because any feasible path that visits the required waypoints in the specified order can be decomposed at those waypoints into the same segments; minimising each segment independently therefore minimises the total. Case 3’s cost of 39 (22 + 17) and Case 4’s cost of 48 (22 + 18 + 8) are thus both the shortest-segment sums and the globally minimum costs for their respective fixed-order route constraints.
 
+What the program does *not* address is the broader inspection planning problem: finding the optimal order in which to visit the 30 Task A targets, or minimising total travel over all of them. That is a combinatorial problem — related to the Travelling Salesman Problem — whose complexity grows exponentially with the number of targets and cannot be solved by repeated Dijkstra calls. Task B is scoped only to the four prescribed routes with fixed endpoints and fixed waypoint orders; within that scope, every output is optimal.
 
-| Case | Route (illustrative)            | Queries in the program               |
-| ---- | ------------------------------- | ------------------------------------ |
-| 1    | L0001 → L0001                   | 1 segment (same start/end, cost 0)   |
-| 2    | L0001 → L0010                   | 1 segment                            |
-| 3    | L0001 → L0101, via L0105        | 2 segments: L0001→L0105, L0105→L0101 |
-| 4    | L0001 → L0201, via L0105, L0205 | 3 segments                           |
+#### 2.5.4 Alternative algorithms under different conditions
 
+The table below summarises the complexity of Bidirectional Dijkstra against the main alternatives discussed in this section, where *n* and *m* denote the number of nodes and edges respectively.
 
-There are **7** point-to-point queries in total — **not** single-source shortest paths, and **not** a tour over all 30 inspection targets. Each call handles one start–end pair, which suits bidirectional Dijkstra.
+| Algorithm | Preprocessing | Per-query time | Per-query space | Required input | Correct on `paths.csv`? |
+|---|---|---|---|---|---|
+| Bidirectional Dijkstra (this work) | O(m) | O(m log n) | O(n) | Non-negative weights only | Yes |
+| BFS / Bidirectional BFS | O(m) | O(n + m) | O(n) | Edge list only; ignores weights | No (assumes all weights equal) |
+| A* search | O(m) | O(m log n) worst case; far fewer expansions in practice | O(n) | Admissible heuristic (e.g. node coordinates) | Would be, but coordinates are not present |
+| Contraction Hierarchies / Hub Labelling | Minutes; rebuilt on graph change | Microseconds | O(n) plus large auxiliary index | Non-negative weights; static graph | Yes, but overkill at this scale |
 
-**(3) Bidirectional search fits queries where both endpoints are known**
+**If the graph were unweighted.** When all edges have the same cost — or when only edge-count matters — Breadth-First Search (BFS) is the natural replacement. BFS expands nodes layer by layer from the source, and the first time a node is reached gives a shortest path in terms of hop count. Its time complexity is **O(n + m)** with no logarithmic factor, since it uses a plain queue rather than a priority queue. A bidirectional BFS applies the same two-frontier idea as bidirectional Dijkstra but meets by hop count rather than weight sum, again improving practical performance on point-to-point queries. Neither BFS variant would be correct on `paths.csv` because equal hop count does not imply equal total distance — a two-hop path with weights 100 and 100 costs far more than a three-hop path with weights 5, 10, and 5.
 
-Each case specifies start and end (waypoints are split into point-to-point segments). Bidirectional Dijkstra expands from **both** ends until the frontiers meet, which helps fix the optimum length early and stop when pruning applies. With about 1000 nodes, this helps limit visited nodes in practice; measured total search time for 7 segments is about **0.443 ms** (§2.7), meeting the assignment’s timing requirement.
-
-**(4) Search on the full graph, few queries — build once, query many times**
-
-The 30 Task A targets only pick landmarks for the cases; shortest paths are computed on the **full graph of about 1000 nodes**. One query costs O(m log n) (§2.3.2), acceptable at this scale; `GraphIndex` is built once at startup and all seven segments reuse the same arrays and algorithm object.
-
-**(5) No planar coordinates — no geometric heuristic**
-
-`paths.csv` has no (x, y) coordinates, so Euclidean distance cannot be used as an O(1) geometric heuristic. Weighted bidirectional Dijkstra uses only edge weights and topology, matching the data format.
-
-**(6) Matches required output**
-
-`DijkstraResult` supplies the path sequence, total cost, and reachability; Case 1 returns cost 0 when start equals end. On non-negative weights the algorithm is optimal for shortest paths, satisfying the assignment.
-
-**Summary:** The task is **a small number of source–sink shortest paths on a positively weighted undirected graph**. Bidirectional Dijkstra is appropriate in correctness, query shape, implementation cost, and measured runtime, and matches the four cases, seven segments, and timed output structure.
-
-##### 2.5.1.2 Quick comparison
-
-
-| Aspect     | This assignment                          | Bidirectional Dijkstra                           |
-| ---------- | ---------------------------------------- | ------------------------------------------------ |
-| Graph type | Undirected, positive integer weights     | Valid relaxations, optimal result                |
-| Query type | 4 cases, 7 point-to-point shortest paths | Source–sink bidirectional search + early pruning |
-| Graph size | ~1000 nodes, ~2000 edges                 | O(m log n) per query; index built once at start  |
-| Data       | No node coordinates                      | No geometric heuristic; simple and reliable      |
-
-
-##### 2.5.1.3 Worth noting in the code
-
-Within the bidirectional Dijkstra framework, the submitted code uses the following to support **one graph build and many point-to-point queries** (aligned with §2.3):
-
-
-| Design                      | Purpose                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------- |
-| `GraphIndex`                | Integer node ids; array-backed neighbours for O(1) index access in search              |
-| `int[]` distances / parents | Four arrays for bidirectional distances and predecessors                               |
-| Reused algorithm object     | One `new OptimizedDijkstraAlgorithm` in `TaskB.main`; buffers shared across 7 segments |
-| Lazy priority queues        | Skip stale entries on pop to avoid useless expansions                                  |
-| `(long)` pruning test       | Sum heap-top distances in `long` to avoid `int` overflow in the stop test              |
-| Case splitting + warmup     | `PathCase` splits routes; 2 warmup runs per segment, 3rd run timed                     |
-
-#### 2.5.2 How is the algorithm implemented? What are the time and space complexities?
-
-##### 2.5.2.1 How the code is laid out
-
-The pipeline has four layers: **build graph → integer index → bidirectional shortest-path search → case splitting and timing**.
-
-###### (1) Read CSV and build the graph
-
-Each row of `paths.csv` is `from_location,to_location,weight`. Undirected edges are stored **in both directions** in the adjacency list:
-
-```java
-adjacencyList.get(from).add(new Edge(to, weight));
-adjacencyList.get(to).add(new Edge(from, weight));
-```
-
-Node ids remain `String` at this stage to match the CSV for debugging; hot-path search uses the integer index layer below, concentrating string cost in the **one-time** indexing step.
-
-###### (2) Map nodes to integers
-
-After loading the graph, `TaskB.main` builds the index and creates the algorithm object once:
-
-```java
-Graph graph = Graph.readFromCSV(PATHS_FILE);
-GraphIndex index = GraphIndex.fromGraph(graph);
-OptimizedDijkstraAlgorithm algorithm = new OptimizedDijkstraAlgorithm(index);
-```
-
-`GraphIndex` collects all `location_id` values, **sorts them lexicographically**, maps them to `0 … n-1`, and stores `neighborIds[i][]` and `neighborWeights[i][]` per node. Relaxation then uses array indices without repeatedly allocating `Edge` objects in the inner loop.
-
-###### (3) Bidirectional Dijkstra search
-
-**Structures (built once, shared by all 7 segments):** four arrays of length `n` — `distForward`, `distBackward`, `parentForward`, `parentBackward` — and two `PriorityQueue<HeapNode>` (node id and current distance).
-
-**Steps for one query:**
-
-
-| Step | Action                                                                            |
-| ---- | --------------------------------------------------------------------------------- |
-| 1    | Map start and end to integer ids; unreachable if either id is missing             |
-| 2    | If start equals end, return cost 0                                                |
-| 3    | `resetSearchState()`: distances to `INF`, parents to -1, clear both heaps         |
-| 4    | Push start on forward heap and end on backward heap; set parents for backtracking |
-| 5    | Run the bidirectional main loop (below)                                           |
-| 6    | `buildPath` from the meeting node; wrap in `DijkstraResult`                       |
-
-
-**Main loop:** While both heaps are non-empty, read heap-top distances `forwardBest` and `backwardBest`. If their sum is at least the current best full-path distance `bestDistance`, stop. Otherwise **expand the side with the smaller heap top** so the two frontiers stay aligned.
-
-```java
-while (!forwardQueue.isEmpty() && !backwardQueue.isEmpty()) {
-    int forwardBest = forwardQueue.peek().distance;
-    int backwardBest = backwardQueue.peek().distance;
-    if ((long) forwardBest + (long) backwardBest >= bestDistance) break;
-    if (forwardBest <= backwardBest)
-        expandFrontier(forwardQueue, distForward, distBackward, parentForward, ...);
-    else
-        expandFrontier(backwardQueue, distBackward, distForward, parentBackward, ...);
-}
-```
-
-`(long)` addition avoids overflow when summing two large `int` distances and misjudging the prune condition. `expandFrontier` reports whether a better meeting point was found; the main loop updates `bestDistance` and `meetingPoint`.
-
-**Inside `expandFrontier`, three main steps:**
-
-1. **Stale heap entries:** A node may be pushed several times. On pop, use `do { poll } while (distance > ownDistances[node])` to discard outdated entries before expanding.
-2. **Meeting check:** If the current node was reached from the other side, try to improve the best meeting point using the sum of both distances.
-3. **Relax neighbours:** Walk `index.neighbors` and weights; after a successful relaxation, if the neighbour is on the opposite frontier, check for a better full path there too.
-
-**Path reconstruction (`buildPath`):** From the meeting node, follow `parentForward` to the start and reverse for the first half; follow `parentBackward` to the end. `locationOf` converts integer ids back to labels such as `L0001` for output.
-
-###### (4) Case splitting and timing: `TaskB.solveCase`
-
-Each assignment case is a `PathCase`. For example `new PathCase(3, a1, b1, b5)` yields route points `[L0001, L0105, L0101]` and calls `findShortestPath` on each consecutive pair:
-
-```java
-cases.add(new PathCase(3, a1, b1, b5));  // two segments: L0001→L0105, L0105→L0101
-```
-
-The first segment’s path is appended in full; later segments use `subList(1, size)` to drop the duplicate join node. Case total cost is the sum of segment costs. Timing: 2 warmup runs per segment, then the 3rd run is recorded, to reduce JVM cold-start bias on millisecond timings.
-
-##### 2.5.2.2 Time and space complexity
-
-> Complexities are written in plain text (e.g. `O(m log n)`, `O(k * m log n)`), not LaTeX.
-
-**Notation:** n = number of nodes, m = number of undirected edges in `paths.csv`. In the adjacency list each undirected edge appears twice; total traversal work remains O(n+m); we do not distinguish directed vs undirected storage below.
-
-Complexity is split into **startup** (once), **one shortest-path query**, and **a case with multiple segments**.
-
-###### At startup (runs once)
-
-
-| Step                   | Time   | Space  | Notes                                  |
-| ---------------------- | ------ | ------ | -------------------------------------- |
-| `Graph.readFromCSV`    | O(m)   | O(n+m) | Read each edge into the adjacency list |
-| `GraphIndex.fromGraph` | O(n+m) | O(n+m) | Build integer ids and array adjacency  |
-
-
-Startup does not depend on the number of cases; all four cases and seven segments share one graph and index.
-
-###### One query (`findShortestPath`)
-
-
-|       | Complexity |
-| ----- | ---------- |
-| Time  | O(m log n) |
-| Space | O(n)       |
-
-
-**Time:** Bidirectional Dijkstra has the same asymptotic order as standard Dijkstra. Each edge is relaxed a constant number of times in the worst case; each relaxation may insert into the heap in O(log n), giving O(m log n). The `forwardBest + backwardBest ≥ bestDistance` prune reduces **actual** work (§2.7) but not worst-case Big-O.
-
-**Space:** Four O(n) arrays plus two heaps that may hold O(n) entries each — still O(n) overall.
-
-###### Multi-segment cases (e.g. Case 3, 4)
-
-If a case is split into k segments (one `findShortestPath` per consecutive pair in `routePoints`):
-
-
-|       | Complexity     |
-| ----- | -------------- |
-| Time  | O(k * m log n) |
-| Space | O(n)           |
-
-
-k is small here (7 segments in total). `OptimizedDijkstraAlgorithm` is constructed once in `main`; `resetSearchState()` reuses the same arrays and heaps — **no** k copies of O(n) structures.
-
-#### 2.5.3 If every segment is shortest, is the whole inspection plan optimal?
-
-##### 2.5.3.1 Short answer first
-
-**It depends on which problem is being asked.**
-
-For Cases 1–4, each `findShortestPath(from, to)` returns the **shortest path on the full `paths.csv` graph** (minimum sum of edge weights) for that pair. For the subproblem **with only a given start and end**, every query is optimal.
-
-If the problem is restricted to: **the assignment fixes the start, waypoint order, and end** (`routePoints` fixed), then the sum of segment shortest-path costs is the **global optimum under that route constraint** (Case 3 cost 39 and Case 4 cost 48 are examples).
-
-If the problem is enlarged to: **reorder waypoints, choose which nodes to visit, or tour all 30 Task A targets with minimum total cost**, segment Dijkstra results **do not** imply overall optimality. These are different mathematical problems.
-
-##### 2.5.3.2 What the two levels mean
-
-
-| Level                                    | Meaning in this project                                                               | Solved by the program?                                 |
-| ---------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| **Level A: segmented shortest paths**    | Shortest path between each consecutive pair on the prescribed route, then concatenate | Yes (`TaskB.solveCase` + `OptimizedDijkstraAlgorithm`) |
-| **Level B: overall inspection planning** | e.g. visit multiple Task A targets in some order with minimum total travel cost       | No (not required by Task B, not implemented)           |
-
-
-**Level A** is the classical **shortest path problem** (single pair, non-negative weights). Dijkstra and its bidirectional variant are optimal here.
-
-**Level B**, if interpreted as visiting many nodes and returning to the start or fixing only the end, is closer to **TSP or constrained routing**: besides edge costs, one must choose **visit order**, which nodes to include, whether to revisit nodes, etc. That is not the same difficulty as one shortest-path query, and repeated Dijkstra runs do not automatically yield a global optimum.
-
-Task A picks 10 high-priority targets per dataset (30 in total). Task B only uses some of them as endpoints and waypoints for Cases 1–4; it does **not** require visiting all 30 with minimum total cost.
-
-##### 2.5.3.3 What the program is really solving
-
-`PathCase` turns an assignment route into an ordered list `routePoints`, e.g. Case 3:
-
-```text
-routePoints = [L0001, L0105, L0101]
-               start  waypoint  end
-```
-
-`solveCase` calls shortest path on each adjacent pair `(routePoints[i], routePoints[i+1])`, concatenates paths (dropping the duplicate join node from the second segment onward), and sets **total cost = sum of segment costs**.
-
-The program therefore solves:
-
-> With **waypoint order fixed by the assignment**, minimize the path length between each consecutive pair of route points, then join the segments end to end.
-
-On a graph with non-negative weights, any path from start through the waypoints in order to the end can be split into segments; total cost equals the sum of segment costs. For a **fixed-order** `routePoints`, shortest paths per segment and concatenation give the **global minimum** under that constraint; there is no extra freedom that requires joint optimization across segments.
-
-##### 2.5.3.4 When it is globally optimal — and when it is not
-
-**(1) Fixed waypoint order: optimal segments ⇒ globally optimal route**
-
-For Case 3 the program computes L0001→L0105 (22) and L0105→L0101 (17), total 39. Each segment is a shortest path on the full graph. Because the assignment requires visiting **L0105 in order**, any feasible path splits at L0105 into those two legs, so **the minimum total cost from L0001 via L0105 to L0101 equals the sum of the two segment shortest-path costs**; 39 is both the optimal segment sum and the global optimum under that fixed order. Case 4 (22+18+8=48) is analogous.
-
-**(2) Task B only answers the four prescribed routes**
-
-The program outputs shortest paths and costs for Cases 1–4 on `paths.csv`. It does **not** solve problems such as starting at one node, visiting all 30 high-priority Task A targets with minimum mileage. Those are tour/combinatorial problems (e.g. TSP), not the same as one or many shortest-path queries.
-
-**(3) Task A’s 30 targets vs Task B routing are two layers of decisions**
-
-Task A ranks which nodes matter for inspection; Task B finds shortest routes for given starts, waypoints, and ends. Even when all route nodes come from Task A, **which nodes matter** and **how to walk a given route as short as possible** are different questions; this program only addresses the latter.
-
-##### 2.5.3.5 Wrap-up
-
-1. **Single query (guaranteed):** Each `findShortestPath(a, b)` is a shortest path from `a` to `b` on the graph — correctness of Dijkstra on non-negative weights.
-2. **Case total cost (guaranteed, and globally optimal for the fixed route):** On the assignment’s `routePoints`, the sum of adjacent segment shortest-path costs matches the program output (e.g. Case 3: 39, Case 4: 48). With waypoint order fixed, that total is the **global optimum for that case’s route constraint** (see §2.4.4 (1)).
-3. **Overall inspection planning (not guaranteed):** One cannot infer an optimal tour of all 30 targets, or global optimality when **waypoints may be reordered or the visit set is free**; see §2.4.4 (2)–(3) — mainly **different problem types** (Level A fixed-route shortest paths vs Level B combinatorial/tour planning), not a bug in the implementation.
-
----
-
-#### 2.5.4 If the graph were unweighted, what alternatives could be considered? How do they compare with the current choice?
-
-##### 2.5.4.1 How unweighted and weighted graphs differ
-
-- **Unweighted:** Each edge often has cost 1; shortest means **fewest edges**.
-- **Weighted (this assignment):** Shortest means **minimum sum of edge weights**; edges may have different lengths, so hop count is not a valid proxy.
-
-Using BFS and treating every edge as one step wrongly equates long and short edges; **results are generally wrong** on this data. With non-negative weights, a Dijkstra-style method (here, bidirectional Dijkstra) is required.
-
-##### 2.5.4.2 If the graph were unweighted
-
-**Breadth-first search (BFS)**
-
-- Idea: Expand in layers from the start; the **first time** a node is reached gives a shortest path in edge count.
-- Pros: Simple queue, O(n+m) time, no log factor from a heap, small constants.
-- Cons: Only for unweighted or uniform-weight graphs; not for arbitrary positive integers as in this assignment.
-
-**Bidirectional BFS**
-
-- Idea: Expand in layers from start and end; similar to bidirectional Dijkstra but meetings are by **hop count**, not sum of weights.
-- Pros: Often smaller search region than one-way BFS for point-to-point queries; still O(n+m) scale.
-- Cons: Assumes unit edge weight; wrong on a weighted graph.
-
-**0–1 BFS (deque BFS)**
-
-- Idea: For edges of weight only 0 or 1, use a deque to move between “current distance” and “current distance + 1” efficiently.
-- Pros: Between BFS and Dijkstra in speed, O(n+m).
-- Cons: Weights must be 0/1 only; **not** for arbitrary positive weights here; included for context.
-
-##### 2.5.4.3 Compared to what we use now
-
-- **What is optimized:** Unweighted methods minimize **edge count**; this program minimizes **sum of weights**. The problem settings differ; BFS’s O(n+m) does not justify replacing Dijkstra on a weighted graph.
-- **Implementation:** BFS uses a queue by layer; Dijkstra uses a priority queue for the smallest tentative distance, typically O(m log n). If data became unweighted, `GraphIndex` and the bidirectional framework could stay; heaps would become queues.
-
-#### 2.5.5 If the graph were much larger or nodes had coordinates, what else could be used? Pros and cons?
-
-##### 2.5.5.1 When the graph gets huge
-
-**Bidirectional Dijkstra (extension of current approach)**
-
-- Pros: Still optimal for shortest paths; close to existing code.
-- Cons: One query may still touch many nodes; latency grows with graph size; limited benefit when query count is small.
-
-**A***
-
-- Pros: With a good heuristic h, may expand fewer nodes than plain Dijkstra.
-- Cons: Hard to design h without coordinates; precomputing distances to the goal adds per-query cost, poor fit when there are only a few queries.
-
-**Contraction Hierarchies (CH), Hub Labeling, etc.**
-
-- Pros: Very fast queries after heavy preprocessing; suited to many thousands of queries.
-- Cons: Costly preprocessing and implementation; rebuild when the graph changes. With only 7 segments and n ≈ 1000, preprocessing is **not worthwhile**.
-
-**Hierarchical / highway road networks**
-
-- Pros: On large road networks with road classes, can trade a small amount of optimality for speed.
-- Cons: Needs hierarchy such as arterials vs local roads; `paths.csv` has no such fields.
-
-##### 2.5.5.2 If nodes have coordinates (x, y)
-
-*A with Euclidean straight-line distance as heuristic h**
-
-- Pros: Fast h; on road networks embedded in the plane, Euclidean distance is often an admissible underestimate, guiding search toward the goal.
-- Cons: Real routes may detour; h must not overestimate; slightly more complex than Dijkstra.
-
-**Dijkstra + geographic pruning (e.g. sector limits)**
-
-- Pros: Still graph-based; coordinates may shrink the searched region.
-- Cons: Sensitive parameters; must prove no optimal path is missed — higher engineering risk.
-
-**Visibility graphs, continuous motion planning**
-
-- Pros: For obstacles and open terrain.
-- Cons: Does not match a discrete node/edge CSV road network; a different problem class.
-
-**Bidirectional Dijkstra (no coordinates)**
-
-- Pros: Correct without coordinates, as in this project.
-- Cons: May expand more nodes than coordinate-guided A*.
-
-##### 2.5.5.3 Back to our project
-
-`paths.csv` has **no node coordinates**, about 1000 nodes, and only **7** segment queries. **Bidirectional Dijkstra + GraphIndex** is a good balance of correctness, implementation effort, and measured time (§2.7). If future data included coordinates and many queries, **A*** with Euclidean h would be a natural next step; if the graph grew to millions of nodes with huge query volume, consider **CH / Hub Labeling**.
-
-## 2.6 Experimental Results
-
-### Table 1: shortest-path results
-
-
-| Case | Start | End   | Waypoints     | Total cost |
-| ---- | ----- | ----- | ------------- | ---------- |
-| 1    | L0001 | L0001 | —             | **0**      |
-| 2    | L0001 | L0010 | —             | **27**     |
-| 3    | L0001 | L0101 | L0105         | **39**     |
-| 4    | L0001 | L0201 | L0105 → L0205 | **48**     |
-
-
-### Table 2: search time (ms)
-
-
-| Case               | Search time |
-| ------------------ | ----------- |
-| 1                  | 0.001       |
-| 2                  | 0.141       |
-| 3                  | 0.133       |
-| 4                  | 0.169       |
-| **Total (7 seg.)** | **0.443**   |
+**If the graph became much larger.** With hundreds of thousands or millions of nodes, **O(m log n)** per query becomes too slow for interactive use if many queries are needed. Two families of approaches are relevant. The first is A* search, which augments Dijkstra with a heuristic function h(v) that estimates the remaining distance from node v to the destination. If the graph had node coordinates, the Euclidean straight-line distance provides an admissible heuristic (it never overestimates), and A* would typically expand far fewer nodes than Dijkstra. Without coordinates, constructing an effective heuristic requires preprocessing (e.g., landmark distances), which leads to the second family. Contraction Hierarchies and Hub Labelling are preprocessing-based methods that build auxiliary data structures enabling queries to be answered in microseconds on graphs with millions of nodes. The trade-off is substantial upfront cost and complexity: preprocessing can take minutes, and the structures must be rebuilt whenever the graph changes. At the scale of this coursework — approximately 1,000 nodes, seven total segment queries — neither A* (which requires coordinate data not present in `paths.csv`) nor preprocessing-based methods are justified. Bidirectional Dijkstra provides correct, sub-millisecond results with no preprocessing, making it the appropriate choice for the current problem scale and data format.
 
 ## Chapter 3 – Design of the Overall Application (Task C)
 
-Our system employs a **modular**, **Object-Oriented design** to ensure maintainability and scalability.
 ### 3.1 Overall Application Design
-### 3.2 Data Structure
+
+The Urban Infrastructure Inspection System is organised as a layered package hierarchy under the root namespace `inspection`. Each layer has a single, clearly bounded responsibility and depends only on layers below it, creating a directed dependency graph with no cycles.
+
+```
+inspection.app          ← Entry point & task orchestration
+    ├── inspection.io           ← File I/O (CSV reading and writing)
+    ├── inspection.analysis     ← Dataset analysis utilities
+    ├── inspection.sorting      ← Sorting algorithm implementations
+    └── inspection.graph        ← Graph search algorithms
+            └── inspection.model    ← Core domain objects (no dependencies on other packages)
+```
+
+At runtime, `InspectionSystem.main()` acts as the single entry point and orchestrates two sequential phases. In Phase 1, `TaskARunner.run()` loads the three candidate datasets from CSV files via `CandidateLoader`, times all three sorting algorithms on each dataset, extracts the top 10 locations per dataset, and returns a `Location[3][10]` array directly to the caller. In Phase 2, `TaskBRunner.run(Location[][])` receives that array as a method argument — no intermediate file is re-read — builds the infrastructure graph from `paths.csv` via `GraphLoader`, converts it to an integer-indexed representation via `GraphIndex`, and executes the four prescribed shortest-path cases using `OptimizedDijkstraAlgorithm`. Both phases write output files to the `output/` directory as audit artifacts, but those files are not part of the runtime pipeline.
+
+This two-phase handoff design makes the system a single coherent application rather than two independent programs. The `Location[][]` array that flows from Phase 1 to Phase 2 carries live Java objects; the downstream code requires no file parsing and no type conversion.
+
+### 3.2 Data Structures
+
+Three distinct data structures are used across the system, each chosen to match the access pattern of the component that uses it.
+
+**`Location[]` arrays** are the primary data structure for candidate datasets. Arrays are chosen over `List<Location>` for two reasons. First, the size of each dataset is fixed after loading — the two-pass strategy in `CandidateLoader` counts non-empty data rows on the first pass, then allocates an exactly-sized array on the second, eliminating wasted capacity. Second, all three sorting algorithms operate in-place by swapping array elements using index arithmetic; the constant-time random access of arrays is essential to their correctness and performance. A fresh copy is made before each sort via `System.arraycopy` to preserve the original order for subsequent algorithm runs.
+
+**`HashMap<String, List<Edge>>`** is the adjacency list used by `Graph`. Each key is a location ID string; the corresponding value is a `List<Edge>` holding the outgoing edges from that node. This structure supports the graph-building phase well: `HashMap.putIfAbsent` and `List.add` are amortised O(1), and the full graph is built in O(m) time by iterating once through the edge rows of `paths.csv`. Undirected edges are represented as two directed `Edge` objects — one in each direction — inserted in the same `addEdge` call.
+
+**`int[][]` parallel arrays** are the performance-critical data structure used inside `GraphIndex` and `OptimizedDijkstraAlgorithm`. `GraphIndex.fromGraph()` assigns each location ID a consecutive integer index and stores the graph as two parallel arrays: `neighborIds[i][]` holds the integer indices of the neighbours of node i, and `neighborWeights[i][]` holds the corresponding edge weights. The inner relaxation loop of the shortest-path algorithm accesses these arrays with direct index arithmetic, replacing the `HashMap.get` and string comparison operations that would be required if the string-keyed `Graph` were queried directly. Four additional flat `int[]` arrays — `distForward`, `distBackward`, `parentForward`, `parentBackward` — store current tentative distances and parent pointers for both Dijkstra frontiers. These are allocated once in the constructor and reset with `Arrays.fill` between calls, avoiding repeated heap allocation across the seven segment queries.
+
+The three data structures serve complementary roles: `Location[]` enables in-place sorting; `HashMap<String, List<Edge>>` enables readable, flexible graph construction; and `int[][]` enables cache-friendly, low-overhead graph traversal.
+
 ### 3.3 Classes and Functions
+
+The system comprises fourteen classes across six packages. The table below summarises each class's primary role and key methods.
+
+| Class | Package | Responsibility | Key methods |
+|---|---|---|---|
+| `Location` | `model` | Domain object for one candidate location | `compareTo(Location)`, `getLocationId()`, `getPriorityScore()` |
+| `Edge` | `model` | Immutable directed weighted edge | `getTarget()`, `getWeight()` |
+| `Graph` | `model` | String-keyed adjacency list | `addEdge(from, to, weight)`, `getEdges(id)`, `getAllLocations()` |
+| `GraphIndex` | `model` | Integer-indexed array view of a `Graph` | `fromGraph(Graph)`, `neighbors(i)`, `weights(i)`, `idOf(id)`, `locationOf(i)` |
+| `DijkstraResult` | `model` | Immutable shortest-path query result | `getPath()`, `getTotalCost()`, `isReachable()`, `getPathString()` |
+| `SortingAlgorithms` | `sorting` | Bubble, Quick, and Merge Sort on `Location[]` | `bubbleSort(arr)`, `quickSort(arr)`, `mergeSort(arr)` |
+| `OptimizedDijkstraAlgorithm` | `graph` | Bidirectional Dijkstra with buffer reuse | `findShortestPath(from, to)`, `resetSearchState()` |
+| `CandidateLoader` | `io` | Two-pass CSV loading into `Location[]` | `load(filePath)` |
+| `GraphLoader` | `io` | Builds `Graph` from edge-list CSV | `load(filePath)` |
+| `ResultExporter` | `io` | Writes all output CSV files | `exportTop30(…)`, `exportTimingReport(…)`, `exportPathResults(…)`, `exportDataAnalysis(…)` |
+| `DataAnalyzer` | `analysis` | Computes structural properties of a dataset | `analyze(locations, label)` |
+| `TaskARunner` | `app` | Coordinates the Phase 1 sorting workflow | `run()` → `Location[][]` |
+| `TaskBRunner` | `app` | Coordinates the Phase 2 routing workflow | `run(Location[][])` |
+| `InspectionSystem` | `app` | Single `main()` entry point | `main(String[])` |
+
+`SortingAlgorithms` and both loader classes (`CandidateLoader`, `GraphLoader`) are non-instantiable utility classes with private constructors, signalling that they contain only static methods and should not be used as objects. `DijkstraResult` and `Edge` are immutable value objects: their fields are `final` and no setters are provided; `DijkstraResult.getPath()` additionally returns a defensive copy of the internal list to prevent external mutation.
+
 ### 3.4 Object-Oriented Design
+
+The system applies four core OOP principles consistently across its class design.
+
+**Encapsulation** is enforced in every domain object. `Location`'s `locationId` and `priorityScore` fields are `private final`; they are exposed only through read-only getters. `Graph`'s adjacency list map is never exposed directly — callers use `addEdge`, `getEdges`, and `getAllLocations`, and the last of these returns an unmodifiable set view via `Collections.unmodifiableSet`. `Edge` stores its `target` and `weight` as `private final` fields with no mutation methods. This encapsulation means the internal representation of each class can be changed without affecting the classes that depend on it.
+
+**Abstraction** is applied at the I/O layer. The `CandidateLoader.load(filePath)` and `GraphLoader.load(filePath)` methods hide all file-reading logic — `BufferedReader`, `FileReader`, line splitting, header skipping, two-pass counting — behind a single static method call. Callers (`TaskARunner` and `TaskBRunner`) interact with these loaders through a one-line call and receive fully constructed Java objects; they are unaware of the CSV format or parsing details. This means that if the data source were changed from CSV to a database or a JSON API, only the loader classes would need to change.
+
+**The `Comparable<Location>` interface** formalises the ranking contract for candidate locations. By implementing `compareTo(Location other)`, `Location` declares that it has a natural ordering. All three sorting algorithms in `SortingAlgorithms` call `arr[i].compareTo(arr[j])` and sort in the order defined by this single method: descending priority score as the primary key, ascending location ID as the tie-breaker. This design means the ranking rule is defined once in `Location` and is automatically respected by any algorithm that uses `compareTo`, including Java's own `Collections.sort` or `Arrays.sort` if they were used elsewhere in the system.
+
+**Single Responsibility Principle (SRP)** is the most pervasive design decision in the codebase. The original code mixed I/O into domain classes: `Graph` had a `readFromCSV` method, and `DataAnalyzer` duplicated the same CSV-reading logic found in `TaskA`. The refactored design assigns each class one job: `Graph` models the graph topology, `GraphLoader` handles file reading, `ResultExporter` handles file writing, and `DataAnalyzer` performs statistical analysis. The `TaskARunner` and `TaskBRunner` classes exist solely to sequence their respective workflows; `InspectionSystem` exists solely to chain the two runners together. This strict role separation means each class is testable in isolation and modifications to one concern — say, changing the output format — do not require changes to unrelated classes.
 
 ## Chapter 4 – Project Reflection (Task D)
 
