@@ -5,12 +5,6 @@ import java.util.List;
 
 /**
  * Immutable result of a single shortest-path query.
- *
- * <p>Encapsulates whether the destination was reachable, the ordered list of
- * location IDs forming the path, and the total accumulated edge weight.
- * Returning a dedicated result object — rather than {@code null} or a raw list
- * — makes the caller's reachability check explicit and avoids
- * {@code NullPointerException} in unreachable cases.
  */
 public class DijkstraResult {
 

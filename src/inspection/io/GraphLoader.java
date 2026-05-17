@@ -8,21 +8,6 @@ import java.io.IOException;
 
 /**
  * Loads a weighted-edge CSV file into a {@link Graph}.
- *
- * <p>Previously, {@code Graph.readFromCSV()} mixed file-I/O into the domain
- * model class. Extracting the loading logic here keeps {@link Graph} a pure
- * in-memory data structure with no I/O dependencies, and follows the
- * Single Responsibility Principle.
- *
- * <p>Expected CSV format (paths.csv):
- * <pre>
- *   from_location,to_location,weight
- *   L0001,L0002,15
- *   L0001,L0003,22
- *   ...
- * </pre>
- * Each row is treated as an undirected edge; both directions are inserted
- * into the {@link Graph} via {@link Graph#addEdge}.
  */
 public class GraphLoader {
 

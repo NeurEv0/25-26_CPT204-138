@@ -15,10 +15,6 @@ import inspection.model.Location;
  *       {@link inspection.app.TaskARunner} to embed per-dataset analysis in the
  *       sorting workflow output.</li>
  * </ol>
- *
- * <p>Data loading is delegated to {@link CandidateLoader}, eliminating the
- * duplicate {@code readCSV} method that previously existed in both the old
- * {@code TaskA} and {@code DataAnalyzer} classes.
  */
 public class DataAnalyzer {
 

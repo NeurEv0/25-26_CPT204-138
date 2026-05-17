@@ -2,10 +2,6 @@ package inspection.model;
 
 /**
  * An immutable, weighted directed edge in the infrastructure graph.
- *
- * <p>Because the graph in paths.csv is undirected, every logical connection
- * is represented by two {@code Edge} objects — one in each direction — so
- * that shortest-path traversal only needs to follow outgoing edges.
  */
 public class Edge {
 

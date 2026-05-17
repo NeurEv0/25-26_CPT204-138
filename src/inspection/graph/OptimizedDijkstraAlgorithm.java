@@ -9,31 +9,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 /**
- * Bidirectional Dijkstra's algorithm for shortest-path queries on the
- * infrastructure graph.
- *
- * <h3>Why bidirectional Dijkstra?</h3>
- * Standard (unidirectional) Dijkstra expands a frontier whose radius grows
- * until it reaches the destination. Bidirectional Dijkstra runs two
- * simultaneous frontiers — one forward from the source, one backward from the
- * destination — and terminates when they meet. In practice this roughly halves
- * the number of nodes settled, giving a significant speed-up on large sparse
- * graphs.
- *
- * <h3>Complexity</h3>
- * <ul>
- *   <li>Time: O((V + E) log V) where V = number of nodes, E = number of edges.</li>
- *   <li>Space: O(V) for distance arrays and parent arrays (reused between queries).</li>
- * </ul>
- *
- * <h3>Implementation notes</h3>
- * <ul>
- *   <li>Node IDs are integers from {@link GraphIndex} — array-backed distances
- *       avoid {@code HashMap} overhead inside the hot loop.</li>
- *   <li>Stale heap entries are skipped (lazy deletion pattern).</li>
- *   <li>Distance arrays are reset with {@link Arrays#fill} between queries;
- *       the arrays themselves are reused to avoid repeated allocation.</li>
- * </ul>
+ * Bidirectional Dijkstra's algorithm for shortest-path queries on the infrastructure graph.
  */
 public class OptimizedDijkstraAlgorithm {
 

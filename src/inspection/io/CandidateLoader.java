@@ -8,21 +8,6 @@ import java.io.IOException;
 
 /**
  * Loads a candidate-location CSV file into a {@link Location} array.
- *
- * <p>Previously, identical CSV-reading logic existed in both {@code TaskA.java}
- * and {@code DataAnalyzer.java}. Extracting it here eliminates the duplication
- * and gives every part of the system a single, consistent way to load candidate
- * data: the sorting workflow ({@link inspection.app.TaskARunner}) and the
- * analysis utility ({@link inspection.analysis.DataAnalyzer}) both call
- * {@link #load(String)}.
- *
- * <p>Expected CSV format:
- * <pre>
- *   location_id,priority_score
- *   L0001,9999
- *   L0002,9998
- *   ...
- * </pre>
  */
 public class CandidateLoader {
 

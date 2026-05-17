@@ -6,18 +6,6 @@ import inspection.model.Location;
  * Provides three sorting algorithms — Bubble Sort, Quick Sort, and Merge Sort —
  * all operating on {@link Location} arrays using the natural ordering defined
  * by {@link Location#compareTo} (descending priority score, ascending ID tie-break).
- *
- * <p>Each method sorts the supplied array <em>in place</em> and accepts a fresh
- * copy for every timing run so that initial order is preserved between runs.
- *
- * <h3>Complexity summary</h3>
- * <table>
- *   <tr><th>Algorithm</th><th>Best</th><th>Average</th><th>Worst</th><th>Space</th></tr>
- *   <tr><td>Bubble Sort</td><td>O(n)</td><td>O(n²)</td><td>O(n²)</td><td>O(1)</td></tr>
- *   <tr><td>Quick Sort</td><td>O(n log n)</td><td>O(n log n)</td><td>O(n²)*</td><td>O(log n)</td></tr>
- *   <tr><td>Merge Sort</td><td>O(n log n)</td><td>O(n log n)</td><td>O(n log n)</td><td>O(n)</td></tr>
- * </table>
- * * Worst case occurs with this implementation's first-element pivot on sorted input.
  */
 public class SortingAlgorithms {
 
@@ -29,14 +17,6 @@ public class SortingAlgorithms {
     // Bubble Sort
     // -------------------------------------------------------------------------
 
-    /**
-     * Sorts {@code arr} in place using Bubble Sort with early termination.
-     *
-     * <p>After each pass the largest unsorted element bubbles to its correct
-     * position. If a full pass produces no swaps, the array is already sorted
-     * and the algorithm exits immediately. This makes Bubble Sort efficient
-     * (approaching O(n)) on nearly sorted input.
-     */
     public static void bubbleSort(Location[] arr) {
         int n = arr.length;
         for (int i = 0; i < n - 1; i++) {
@@ -57,9 +37,6 @@ public class SortingAlgorithms {
     // Quick Sort
     // -------------------------------------------------------------------------
 
-    /**
-     * Public entry point: sorts {@code arr} in place using Quick Sort.
-     */
     public static void quickSort(Location[] arr) {
         quickSort(arr, 0, arr.length - 1);
     }
@@ -72,15 +49,6 @@ public class SortingAlgorithms {
         }
     }
 
-    /**
-     * Partitions the sub-array {@code arr[low..high]} around the first element
-     * as pivot using a two-pointer scan. Returns the final index of the pivot.
-     *
-     * <p><b>Note:</b> Choosing the first element as pivot degrades performance
-     * to O(n²) when the input is already (nearly) sorted in the target order.
-     * This behaviour is intentional here — it is observed and discussed in the
-     * Task A analysis (Dataset A timing result).
-     */
     private static int partition(Location[] arr, int low, int high) {
         Location pivot = arr[low];
         int left = low + 1;
@@ -110,9 +78,6 @@ public class SortingAlgorithms {
     // Merge Sort
     // -------------------------------------------------------------------------
 
-    /**
-     * Public entry point: sorts {@code arr} in place using Merge Sort.
-     */
     public static void mergeSort(Location[] arr) {
         mergeSort(arr, 0, arr.length - 1);
     }
@@ -126,11 +91,6 @@ public class SortingAlgorithms {
         }
     }
 
-    /**
-     * Merges two adjacent sorted sub-arrays {@code arr[left..mid]} and
-     * {@code arr[mid+1..right]} into a single sorted sequence.
-     * Requires O(n) temporary storage for the two sub-arrays.
-     */
     private static void merge(Location[] arr, int left, int mid, int right) {
         int n1 = mid - left + 1;
         int n2 = right - mid;

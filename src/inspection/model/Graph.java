@@ -9,14 +9,6 @@ import java.util.Set;
 
 /**
  * Weighted undirected graph representing the urban infrastructure network.
- *
- * <p>Internally stored as an adjacency list ({@code HashMap<String, List<Edge>>}).
- * Each undirected edge in paths.csv is inserted in both directions so that
- * graph traversal only needs to follow outgoing {@link Edge} objects.
- *
- * <p>Graph construction (CSV loading) is deliberately kept outside this class
- * and delegated to {@link inspection.io.GraphLoader}, keeping this class a
- * pure domain model with no I/O dependencies.
  */
 public class Graph {
 

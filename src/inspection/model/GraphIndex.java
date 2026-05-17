@@ -8,12 +8,6 @@ import java.util.Map;
 /**
  * Integer-indexed, array-backed view of a {@link Graph}.
  *
- * <p>String-keyed map lookups inside an inner loop are expensive. This class
- * converts each location ID to a compact integer index at construction time,
- * then stores adjacency data in primitive {@code int[][]} arrays. The result
- * is significantly better cache performance inside
- * {@link inspection.graph.OptimizedDijkstraAlgorithm}.
- *
  * <p>Nodes are sorted lexicographically during construction so that the index
  * assignment is deterministic across runs.
  */
