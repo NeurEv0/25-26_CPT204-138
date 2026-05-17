@@ -1,0 +1,14 @@
+src/inspection/analysis/DataAnalyzer.java
+src/inspection/app/InspectionSystem.java
+src/inspection/app/TaskARunner.java
+src/inspection/app/TaskBRunner.java
+src/inspection/graph/OptimizedDijkstraAlgorithm.java
+src/inspection/io/CandidateLoader.java
+src/inspection/io/GraphLoader.java
+src/inspection/io/ResultExporter.java
+src/inspection/model/DijkstraResult.java
+src/inspection/model/Edge.java
+src/inspection/model/Graph.java
+src/inspection/model/GraphIndex.java
+src/inspection/model/Location.java
+src/inspection/sorting/SortingAlgorithms.java

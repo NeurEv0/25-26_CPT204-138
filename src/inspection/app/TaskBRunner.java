@@ -74,8 +74,8 @@ public class TaskBRunner {
         // PathCase constructor: PathCase(number, start, destination, waypoints...)
         // Waypoints are visited in the order they appear, before the destination.
         List<PathCase> cases = new ArrayList<PathCase>();
-        cases.add(new PathCase(1, a1,  a1,  /* no waypoints */));
-        cases.add(new PathCase(2, a1,  a10, /* no waypoints */));
+        cases.add(new PathCase(1, a1,  a1));   // no waypoints
+        cases.add(new PathCase(2, a1,  a10));  // no waypoints
         cases.add(new PathCase(3, a1,  b1,  b5));        // a1 -> b5 -> b1
         cases.add(new PathCase(4, a1,  c1,  b5, c5));    // a1 -> b5 -> c5 -> c1
 

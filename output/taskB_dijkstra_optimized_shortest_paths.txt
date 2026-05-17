@@ -1,0 +1,46 @@
+Task B - Shortest Path Results
+Algorithm: Bidirectional Dijkstra (optimized)
+==============================================
+Algorithm: Bidirectional Dijkstra (optimized)
+
+Case 1
+Start: L0001
+Destination: L0001
+Waypoints: None
+Path: L0001
+Total cost: 0
+Segment L0001 -> L0001: cost 0, time 0.001 ms
+Case search time: 0.001 ms
+
+Case 2
+Start: L0001
+Destination: L0010
+Waypoints: None
+Path: L0001 -> L0340 -> L0339 -> L0895 -> L0894 -> L0082 -> L0284 -> L0010
+Total cost: 27
+Segment L0001 -> L0010: cost 27, time 0.386 ms
+Case search time: 0.386 ms
+
+Case 3
+Start: L0001
+Destination: L0101
+Waypoints: L0105
+Path: L0001 -> L0340 -> L0339 -> L0247 -> L0017 -> L0128 -> L0107 -> L0106 -> L0105 -> L0106 -> L0107 -> L0108 -> L0827 -> L0996 -> L0101
+Total cost: 39
+Segment L0001 -> L0105: cost 22, time 0.285 ms
+Segment L0105 -> L0101: cost 17, time 0.170 ms
+Case search time: 0.455 ms
+
+Case 4
+Start: L0001
+Destination: L0201
+Waypoints: L0105 -> L0205
+Path: L0001 -> L0340 -> L0339 -> L0247 -> L0017 -> L0128 -> L0107 -> L0106 -> L0105 -> L0106 -> L0107 -> L0108 -> L0243 -> L0242 -> L0241 -> L0385 -> L0205 -> L0201 -> L0201
+Total cost: 48
+Segment L0001 -> L0105: cost 22, time 0.167 ms
+Segment L0105 -> L0205: cost 18, time 0.136 ms
+Segment L0205 -> L0201: cost 8, time 0.083 ms
+Case search time: 0.385 ms
+
+----------------------------------------------
+Total path-search time (7 segments): 1.228 ms
