@@ -1,4 +1,4 @@
-package taskb.graph;
+package inspection.model;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -6,7 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Integer-indexed view of {@link Graph} for fast shortest-path algorithms.
+ * Integer-indexed, array-backed view of a {@link Graph}.
+ *
+ * <p>Nodes are sorted lexicographically during construction so that the index
+ * assignment is deterministic across runs.
  */
 public final class GraphIndex {
 
@@ -15,17 +18,17 @@ public final class GraphIndex {
     private final int[][] neighborIds;
     private final int[][] neighborWeights;
 
-    private GraphIndex(
-            String[] idByIndex,
-            Map<String, Integer> indexById,
-            int[][] neighborIds,
-            int[][] neighborWeights) {
+    private GraphIndex(String[] idByIndex,
+                       Map<String, Integer> indexById,
+                       int[][] neighborIds,
+                       int[][] neighborWeights) {
         this.idByIndex = idByIndex;
         this.indexById = indexById;
         this.neighborIds = neighborIds;
         this.neighborWeights = neighborWeights;
     }
 
+    /** Builds a {@code GraphIndex} from a fully constructed {@link Graph}. */
     public static GraphIndex fromGraph(Graph graph) {
         List<String> ids = new ArrayList<String>(graph.getAllLocations());
         ids.sort(String::compareTo);
@@ -39,7 +42,6 @@ public final class GraphIndex {
 
         int[][] neighborIds = new int[n][];
         int[][] neighborWeights = new int[n][];
-
         for (int i = 0; i < n; i++) {
             List<Edge> edges = graph.getEdges(idByIndex[i]);
             int m = edges.size();
@@ -61,6 +63,7 @@ public final class GraphIndex {
         return idByIndex.length;
     }
 
+    /** Returns the integer index for {@code locationId}, or {@code -1} if not found. */
     public int idOf(String locationId) {
         Integer id = indexById.get(locationId);
         return id == null ? -1 : id;

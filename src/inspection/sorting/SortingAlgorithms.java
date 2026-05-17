@@ -1,9 +1,22 @@
+package inspection.sorting;
+
+import inspection.model.Location;
+
 /**
- * Implements Bubble Sort, Quick Sort, and Merge Sort for Location arrays.
+ * Provides three sorting algorithms — Bubble Sort, Quick Sort, and Merge Sort —
+ * all operating on {@link Location} arrays using the natural ordering defined
+ * by {@link Location#compareTo} (descending priority score, ascending ID tie-break).
  */
 public class SortingAlgorithms {
 
-    // ---- Bubble Sort ----
+    private SortingAlgorithms() {
+        // Utility class — not instantiable.
+    }
+
+    // -------------------------------------------------------------------------
+    // Bubble Sort
+    // -------------------------------------------------------------------------
+
     public static void bubbleSort(Location[] arr) {
         int n = arr.length;
         for (int i = 0; i < n - 1; i++) {
@@ -16,11 +29,14 @@ public class SortingAlgorithms {
                     swapped = true;
                 }
             }
-            if (!swapped) break;
+            if (!swapped) break; // early termination
         }
     }
 
-    // ---- Quick Sort ----
+    // -------------------------------------------------------------------------
+    // Quick Sort
+    // -------------------------------------------------------------------------
+
     public static void quickSort(Location[] arr) {
         quickSort(arr, 0, arr.length - 1);
     }
@@ -34,18 +50,13 @@ public class SortingAlgorithms {
     }
 
     private static int partition(Location[] arr, int low, int high) {
-        Location pivot = arr[low]; // Use first element as pivot
-        int left = low + 1;        // Forward search index
-        int right = high;          // Backward search index
+        Location pivot = arr[low];
+        int left = low + 1;
+        int right = high;
 
         while (right > left) {
-            // Scan forward to find element greater than pivot
-            while (left <= right && arr[left].compareTo(pivot) <= 0)
-                left++;
-            // Scan backward to find element less than or equal to pivot
-            while (left <= right && arr[right].compareTo(pivot) > 0)
-                right--;
-            // Swap the two out-of-place elements
+            while (left <= right && arr[left].compareTo(pivot) <= 0) left++;
+            while (left <= right && arr[right].compareTo(pivot) > 0) right--;
             if (right > left) {
                 Location temp = arr[left];
                 arr[left] = arr[right];
@@ -53,20 +64,20 @@ public class SortingAlgorithms {
             }
         }
 
-        // Move pivot into its final sorted position
-        while (right > low && arr[right].compareTo(pivot) >= 0)
-            right--;
+        while (right > low && arr[right].compareTo(pivot) >= 0) right--;
 
         if (pivot.compareTo(arr[right]) > 0) {
             arr[low] = arr[right];
             arr[right] = pivot;
             return right;
-        } else {
-            return low;
         }
+        return low;
     }
 
-    // ---- Merge Sort ----
+    // -------------------------------------------------------------------------
+    // Merge Sort
+    // -------------------------------------------------------------------------
+
     public static void mergeSort(Location[] arr) {
         mergeSort(arr, 0, arr.length - 1);
     }
@@ -86,7 +97,6 @@ public class SortingAlgorithms {
 
         Location[] leftArr = new Location[n1];
         Location[] rightArr = new Location[n2];
-
         System.arraycopy(arr, left, leftArr, 0, n1);
         System.arraycopy(arr, mid + 1, rightArr, 0, n2);
 

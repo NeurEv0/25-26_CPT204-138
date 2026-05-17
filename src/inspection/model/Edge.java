@@ -1,9 +1,10 @@
-package taskb.graph;
+package inspection.model;
 
 /**
- * Represents one weighted edge in the infrastructure graph.
+ * An immutable, weighted directed edge in the infrastructure graph.
  */
 public class Edge {
+
     private final String target;
     private final int weight;
 
@@ -18,5 +19,10 @@ public class Edge {
 
     public int getWeight() {
         return weight;
+    }
+
+    @Override
+    public String toString() {
+        return "-> " + target + " (w=" + weight + ")";
     }
 }

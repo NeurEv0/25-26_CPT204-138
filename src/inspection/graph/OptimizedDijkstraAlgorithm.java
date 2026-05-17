@@ -1,7 +1,7 @@
-package taskb.dijkstra_optimized;
+package inspection.graph;
 
-import taskb.graph.DijkstraResult;
-import taskb.graph.GraphIndex;
+import inspection.model.DijkstraResult;
+import inspection.model.GraphIndex;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,8 +9,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 /**
- * Bidirectional Dijkstra with integer node ids, array-backed distances/parents,
- * reusable buffers, and stale heap entry skipping.
+ * Bidirectional Dijkstra's algorithm for shortest-path queries on the infrastructure graph.
  */
 public class OptimizedDijkstraAlgorithm {
 
@@ -35,6 +34,14 @@ public class OptimizedDijkstraAlgorithm {
         this.backwardQueue = new PriorityQueue<HeapNode>();
     }
 
+    /**
+     * Finds the shortest path from {@code start} to {@code destination}.
+     *
+     * @param start       location ID of the source node
+     * @param destination location ID of the target node
+     * @return a {@link DijkstraResult} containing the path and total cost,
+     *         or an unreachable result if no path exists
+     */
     public DijkstraResult findShortestPath(String start, String destination) {
         int startId = index.idOf(start);
         int destId = index.idOf(destination);
@@ -43,6 +50,7 @@ public class OptimizedDijkstraAlgorithm {
             return new DijkstraResult(new ArrayList<String>(), INF, false);
         }
 
+        // Trivial case: source == destination (e.g., Case 1 in Task B)
         if (startId == destId) {
             List<String> path = new ArrayList<String>();
             path.add(start);
@@ -64,6 +72,8 @@ public class OptimizedDijkstraAlgorithm {
         while (!forwardQueue.isEmpty() && !backwardQueue.isEmpty()) {
             int forwardBest = forwardQueue.peek().distance;
             int backwardBest = backwardQueue.peek().distance;
+            // Termination criterion: if the sum of the two frontier heads
+            // already exceeds the best known path, no improvement is possible.
             if ((long) forwardBest + (long) backwardBest >= bestDistance) {
                 break;
             }
@@ -102,24 +112,21 @@ public class OptimizedDijkstraAlgorithm {
         backwardQueue.clear();
     }
 
-    private MeetingUpdate expandFrontier(
-            PriorityQueue<HeapNode> queue,
-            int[] ownDistances,
-            int[] oppositeDistances,
-            int[] previous,
-            boolean isForward) {
-
+    private MeetingUpdate expandFrontier(PriorityQueue<HeapNode> queue,
+                                          int[] ownDistances,
+                                          int[] oppositeDistances,
+                                          int[] previous,
+                                          boolean isForward) {
         HeapNode current;
         do {
-            if (queue.isEmpty()) {
-                return MeetingUpdate.none();
-            }
+            if (queue.isEmpty()) return MeetingUpdate.none();
             current = queue.poll();
-        } while (current.distance > ownDistances[current.nodeId]);
+        } while (current.distance > ownDistances[current.nodeId]); // skip stale entries
 
         int meetingPoint = -1;
         int bestTotal = INF;
 
+        // Check if the opposite frontier has already reached this node
         int oppositeAtCurrent = oppositeDistances[current.nodeId];
         if (oppositeAtCurrent < INF) {
             long total = (long) current.distance + (long) oppositeAtCurrent;
@@ -134,9 +141,7 @@ public class OptimizedDijkstraAlgorithm {
         for (int i = 0; i < neighbors.length; i++) {
             int neighborId = neighbors[i];
             int newDistance = current.distance + weights[i];
-            if (newDistance >= ownDistances[neighborId]) {
-                continue;
-            }
+            if (newDistance >= ownDistances[neighborId]) continue;
 
             ownDistances[neighborId] = newDistance;
             previous[neighborId] = current.nodeId;
@@ -158,28 +163,27 @@ public class OptimizedDijkstraAlgorithm {
     private List<String> buildPath(int startId, int destId, int meetingPoint) {
         List<String> path = new ArrayList<String>();
 
+        // Trace forward parent chain from meetingPoint back to start
         int current = meetingPoint;
         while (current != startId) {
             path.add(index.locationOf(current));
             current = parentForward[current];
-            if (current < 0) {
-                return new ArrayList<String>();
-            }
+            if (current < 0) return new ArrayList<String>();
         }
         path.add(index.locationOf(startId));
         reverseInPlace(path);
 
+        // Trace backward parent chain from meetingPoint forward to dest
         current = meetingPoint;
         int next = parentBackward[current];
         while (next != destId) {
-            if (next < 0) {
-                return new ArrayList<String>();
-            }
+            if (next < 0) return new ArrayList<String>();
             path.add(index.locationOf(next));
             current = next;
             next = parentBackward[current];
         }
         path.add(index.locationOf(destId));
+
         return path;
     }
 
@@ -190,6 +194,10 @@ public class OptimizedDijkstraAlgorithm {
             list.set(j, tmp);
         }
     }
+
+    // -------------------------------------------------------------------------
+    // Private helper value types
+    // -------------------------------------------------------------------------
 
     private static final class HeapNode implements Comparable<HeapNode> {
         private final int nodeId;
