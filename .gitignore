@@ -1,3 +1,6 @@
 out/
 *.class
 .DS_Store
+
+# IDE
+.vscode
