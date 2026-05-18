@@ -249,6 +249,7 @@ The table below summarises the complexity of Bidirectional Dijkstra against the 
 The Urban Infrastructure Inspection System is organised as a layered package hierarchy under the root namespace `inspection`. Each layer has a single, clearly bounded responsibility and depends only on layers below it, creating a directed dependency graph with no cycles.
 
 ![alt text](CPT204_arch.drawio.png)
+*Figure. 1: An overview of the layered system structure and the file structure*
 
 At runtime, `InspectionSystem.main()` acts as the single entry point and orchestrates two sequential phases. In Phase 1, `TaskARunner.run()` loads the three candidate datasets from CSV files via `CandidateLoader`, times all three sorting algorithms on each dataset, extracts the top 10 locations per dataset, and returns a `Location[3][10]` array directly to the caller. In Phase 2, `TaskBRunner.run(Location[][])` receives that array as a method argument — no intermediate file is re-read — builds the infrastructure graph from `paths.csv` via `GraphLoader`, converts it to an integer-indexed representation via `GraphIndex`, and executes the four prescribed shortest-path cases using `OptimizedDijkstraAlgorithm`. Both phases write output files to the `output/` directory as audit artifacts, but those files are not part of the runtime pipeline.
 
@@ -268,48 +269,8 @@ The three data structures serve complementary roles: `Location[]` enables in-pla
 
 The entity-relationship diagram below formalises how the core data entities relate to one another. `LOCATION` and `EDGE` are the two fundamental domain entities; `GRAPH` and `GRAPH_INDEX` are structural containers built from them; and `DIJKSTRA_RESULT` is the query-output entity produced by the search algorithm.
 
-```mermaid
-erDiagram
-    LOCATION {
-        String  locationId   PK
-        int     priorityScore
-    }
-
-    EDGE {
-        String  sourceId    FK
-        String  targetId    FK
-        int     weight
-    }
-
-    DATASET {
-        String  label
-        String  csvFile
-        int     size
-    }
-
-    GRAPH {
-        int     locationCount
-        int     edgeCount
-    }
-
-    GRAPH_INDEX {
-        int     size
-    }
-
-    DIJKSTRA_RESULT {
-        int     totalCost
-        boolean reachable
-        String  pathString
-    }
-
-    DATASET         ||--o{  LOCATION        : "contains"
-    LOCATION        ||--o{  EDGE            : "is source of"
-    LOCATION        ||--o{  EDGE            : "is target of"
-    GRAPH           ||--o{  LOCATION        : "indexes"
-    GRAPH           ||--o{  EDGE            : "stores"
-    GRAPH_INDEX     ||--||  GRAPH           : "derived from"
-    DIJKSTRA_RESULT }o--o{  LOCATION        : "path visits"
-```
+![report/ER.png](ER.png)
+*Figure. 2: An overview of the data structure of the system*
 
 ### 3.3 Classes and Functions
 
@@ -336,141 +297,8 @@ The system comprises fourteen classes across six packages. The table below summa
 
 The class diagram below captures the full structure of the system. Solid lines with filled diamonds denote composition; dashed arrows with open arrowheads denote dependency (one class creates or calls another); and the dashed line with a hollow triangle denotes interface realisation.
 
-```mermaid
-classDiagram
-    direction TB
-
-    %% ── model ───────────────────────────────────────────────────
-    class Comparable {
-        <<interface>>
-        +compareTo(T) int
-    }
-
-    class Location {
-        -String locationId
-        -int priorityScore
-        +getLocationId() String
-        +getPriorityScore() int
-        +compareTo(Location) int
-        +toString() String
-    }
-
-    class Edge {
-        -String target
-        -int weight
-        +getTarget() String
-        +getWeight() int
-    }
-
-    class Graph {
-        -HashMap~String,List~Edge~~ adjacencyList
-        +addEdge(String, String, int) void
-        +getEdges(String) List~Edge~
-        +getAllLocations() Set~String~
-        +containsLocation(String) boolean
-        +getLocationCount() int
-    }
-
-    class GraphIndex {
-        -String[] idByIndex
-        -int[][] neighborIds
-        -int[][] neighborWeights
-        +fromGraph(Graph) GraphIndex
-        +size() int
-        +idOf(String) int
-        +locationOf(int) String
-        +neighbors(int) int[]
-        +weights(int) int[]
-    }
-
-    class DijkstraResult {
-        -List~String~ path
-        -int totalCost
-        -boolean reachable
-        +getPath() List~String~
-        +getTotalCost() int
-        +isReachable() boolean
-        +getPathString() String
-    }
-
-    %% ── sorting ─────────────────────────────────────────────────
-    class SortingAlgorithms {
-        <<utility>>
-        +bubbleSort(Location[]) void
-        +quickSort(Location[]) void
-        +mergeSort(Location[]) void
-    }
-
-    %% ── graph ───────────────────────────────────────────────────
-    class OptimizedDijkstraAlgorithm {
-        -GraphIndex index
-        -int[] distForward
-        -int[] distBackward
-        -int[] parentForward
-        -int[] parentBackward
-        +findShortestPath(String, String) DijkstraResult
-        -resetSearchState() void
-    }
-
-    %% ── io ──────────────────────────────────────────────────────
-    class CandidateLoader {
-        <<utility>>
-        +load(String) Location[]
-    }
-
-    class GraphLoader {
-        <<utility>>
-        +load(String) Graph
-    }
-
-    class ResultExporter {
-        <<utility>>
-        +exportTop30(Location[][], String) void
-        +exportTimingReport(long[], long[], long[], String) void
-        +exportPathResults(DijkstraResult[], String) void
-        +exportDataAnalysis(String, String) void
-    }
-
-    %% ── analysis ────────────────────────────────────────────────
-    class DataAnalyzer {
-        <<utility>>
-        +analyze(Location[], String) String
-    }
-
-    %% ── app ─────────────────────────────────────────────────────
-    class TaskARunner {
-        -String DATA_DIR
-        -String OUTPUT_DIR
-        +run() Location[][]
-    }
-
-    class TaskBRunner {
-        +run(Location[][]) void
-    }
-
-    class InspectionSystem {
-        +main(String[]) void
-    }
-
-    %% ── relationships ───────────────────────────────────────────
-    Location           ..|>  Comparable               : implements
-    Graph              "1" *--  "0..*" Edge            : contains
-    GraphIndex         ..>   Graph                     : built from
-    OptimizedDijkstraAlgorithm --> GraphIndex          : uses
-    OptimizedDijkstraAlgorithm ..> DijkstraResult      : returns
-    CandidateLoader    ..>   Location                  : creates
-    GraphLoader        ..>   Graph                     : creates
-    TaskARunner        ..>   CandidateLoader           : uses
-    TaskARunner        ..>   SortingAlgorithms         : uses
-    TaskARunner        ..>   DataAnalyzer              : uses
-    TaskARunner        ..>   ResultExporter            : uses
-    TaskBRunner        ..>   GraphLoader               : uses
-    TaskBRunner        ..>   GraphIndex                : builds
-    TaskBRunner        ..>   OptimizedDijkstraAlgorithm : runs
-    TaskBRunner        ..>   ResultExporter            : uses
-    InspectionSystem   -->   TaskARunner               : orchestrates
-    InspectionSystem   -->   TaskBRunner               : orchestrates
-```
+![alt text](class_diagram.png)
+*Figure. 3: The class diagram of the system*
 
 ### 3.4 Object-Oriented Design
 
@@ -486,7 +314,66 @@ The system applies four core OOP principles consistently across its class design
 
 ## Chapter 4 – Project Reflection (Task D)
 
+### 4.1 AI-Assisted Planning and Collaboration
+
+The module introduced JIRA and Trello as AI-empowered project management tools, and while we were aware of their capabilities, our team ultimately chose to use GitHub as our primary collaboration platform. This decision was driven by practicality: both team members were already committing code to the repository, so GitHub's commit history, file diffs, and branch structure provided a natural and automatic record of who worked on what and when. Each commit message was written to describe the change clearly — for example, "Refactor DataAnalyzer to use CandidateLoader instead of its own readCSV" — which served as a lightweight task log without the overhead of maintaining a separate board. Communication between team members happened through WeChat for real-time discussion of design decisions and task handoffs.
+
+We did make use of AI tools during the project, specifically ChatGPT and Claude. The ways we used them were narrow and deliberate: when an unfamiliar error message appeared during development, we used AI to explain what the message meant before deciding how to fix it ourselves; when we were unsure about the trade-offs between two design approaches (for example, whether to expose the adjacency list directly from `Graph` or return an unmodifiable view), we asked for a brief explanation of the implications. We also used AI for grammar checking when finalising the report.
+
+The advantages of using AI tools in this way were real. Getting a plain-language explanation of a stack trace or an API method reduced the time spent searching documentation, letting us focus on the actual design decisions. The disadvantages, however, are equally real. AI explanations can be confident and fluent while being subtly wrong — we encountered a case where an AI-suggested algorithm variant did not behave correctly on edge cases, and the mistake would only have been caught by testing. A more serious risk is passive reliance: if AI answers questions before the student has genuinely worked through the problem, the student loses the opportunity to develop that reasoning ability themselves. Our approach was to use AI for explanation and grammar, not for producing solutions, which we believe kept the intellectual work genuinely ours.
+
+If we were to use a dedicated project management tool in future work, Trello's Kanban structure would suit a small two-person project well — simple columns such as To Do, In Progress, and Done, with one card per feature or report section, would make task handoffs more visible than commit messages alone. JIRA would be more appropriate for a larger team where issue tracking, sprint planning, and reporting become necessary.
+
+### 4.2 Equality, Diversity, and Inclusion
+
+Equality, diversity, and inclusion (EDI) in software design means that a system should work fairly and accessibly for all potential users, not just those who happen to resemble the developer. For this project, EDI considerations are relevant both in how the system presents its outputs and in how the underlying data might affect different groups of users if the system were deployed in practice.
+
+At present, the system produces all output through console text and CSV files. This is functional but not accessible: a user who relies on a screen reader would need the console output to be structured in a way compatible with assistive technology, and a user who is not proficient in English would receive location IDs and status messages they may not fully understand. One concrete improvement, as suggested in the task specification, would be to add a text-to-speech layer over the console output, allowing visually impaired operators to receive priority rankings and route results audibly without needing to read a terminal. A second improvement would be to externalise all user-facing strings into a language resource file, making it straightforward to provide Chinese-language output — particularly relevant given the system's context at XJTLU, where operators may prefer to work in either language.
+
+A subtler EDI concern involves the priority scoring data itself. The system treats priority scores as given and ranks locations mechanically — it does not ask where the scores come from or whether the scoring methodology favours certain districts or communities over others. If the underlying scoring model systematically undervalues infrastructure in lower-income areas, the system would reproduce and reinforce that inequality in inspection planning. A future improvement would be to surface the data source and scoring methodology in the output report, making the prioritisation process auditable and challengeable by a diverse set of stakeholders.
+
+Implementing these improvements would not be technically difficult individually, but coordinating them raises real challenges. Text-to-speech requires audio hardware and a suitable Java library, introducing a dependency and platform variability. Providing multi-language support requires careful design so that the output format remains machine-readable (for downstream processing) even when user-facing labels change language. Addressing data bias requires input from domain experts and affected communities — something that goes beyond the software team's capability alone and requires institutional commitment. Recognising these challenges is itself a step toward more responsible software development.
+
+### 4.3 Life-long Learning and Future Improvement
+
+The most instructive lesson from this project was the gap between theoretical complexity and real behaviour. Before running the experiments, it was reasonable to assume that Quick Sort — with its O(n log n) average case — would perform competitively across all three datasets. Observing it run at 7.71 ms on Dataset A while Bubble Sort completed the same task in 0.42 ms was a concrete demonstration of why algorithm selection cannot be based on asymptotic notation alone: the constant factors, the pivot strategy, and the shape of the actual input all matter in ways that theory does not capture on its own. This kind of insight — that real measurement is irreplaceable — is useful across many future projects regardless of language or domain.
+
+The second significant lesson came from the refactoring work in Task C. The original code had Task A and Task B as two independent programs with duplicated logic and I/O mixed into domain classes. Restructuring this into a layered `inspection.*` package hierarchy made the codebase significantly easier to reason about and modify. Working through this refactoring made the Single Responsibility Principle feel concrete rather than abstract: the moment `GraphLoader` was separated from `Graph`, it became obvious that changing the CSV format would only require touching one class, not hunting through domain logic for file-reading code.
+
+Within the team, my contribution covered the Task A implementation (the three sorting algorithms, timing harness, dataset analysis, and top-10 selection), the overall package refactoring that integrated Task A and Task B into a single coherent system, and the majority of the report writing. My classmate was responsible for the bidirectional Dijkstra implementation in Task B. The collaboration required us to agree on a shared interface early — specifically that `TaskARunner.run()` would return `Location[][]` — so that the two halves of the system could be connected without either side depending on the other's internal details. Agreeing on this interface in writing, as a method signature, was more effective than describing it informally in a chat message.
+
+If this application were developed further, the most useful next step would be to replace the console-and-CSV interface with a simple web API, so that the inspection planning logic could be called from other systems — for example, a mobile field-worker application or a city dashboard. This would also require more careful error handling and input validation than the current version provides, since the system currently assumes well-formed CSV input and does not gracefully handle missing or malformed rows. A longer-term improvement would be to support incremental graph updates: at present, if new roads are added to the city network, the entire graph must be reloaded from scratch. Supporting dynamic updates would make the system suitable for real-time operational use rather than batch processing alone.
+
 ## Chapter 5 – Program Code
+#### src\inspection\analysis\DataAnalyzer.java
+
+```java
+
+```
+
+#### src\inspection\app\InspectionSystem.java
+
+```java
+
+```
+
+#### src\inspection\app\TaskARunner.java
+
+```java
+
+```
+
+#### src\inspection\graph\OptimizedDijkstraAlgorithm.java
+
+```java
+
+```
+
+#### src\inspection\io\CandidateLoader.java
+
+```java
+
+```
 
 ## Chapter 6 – Appendix
 
