@@ -266,6 +266,51 @@ Three distinct data structures are used across the system, each chosen to match 
 
 The three data structures serve complementary roles: `Location[]` enables in-place sorting; `HashMap<String, List<Edge>>` enables readable, flexible graph construction; and `int[][]` enables cache-friendly, low-overhead graph traversal.
 
+The entity-relationship diagram below formalises how the core data entities relate to one another. `LOCATION` and `EDGE` are the two fundamental domain entities; `GRAPH` and `GRAPH_INDEX` are structural containers built from them; and `DIJKSTRA_RESULT` is the query-output entity produced by the search algorithm.
+
+```mermaid
+erDiagram
+    LOCATION {
+        String  locationId   PK
+        int     priorityScore
+    }
+
+    EDGE {
+        String  sourceId    FK
+        String  targetId    FK
+        int     weight
+    }
+
+    DATASET {
+        String  label
+        String  csvFile
+        int     size
+    }
+
+    GRAPH {
+        int     locationCount
+        int     edgeCount
+    }
+
+    GRAPH_INDEX {
+        int     size
+    }
+
+    DIJKSTRA_RESULT {
+        int     totalCost
+        boolean reachable
+        String  pathString
+    }
+
+    DATASET         ||--o{  LOCATION        : "contains"
+    LOCATION        ||--o{  EDGE            : "is source of"
+    LOCATION        ||--o{  EDGE            : "is target of"
+    GRAPH           ||--o{  LOCATION        : "indexes"
+    GRAPH           ||--o{  EDGE            : "stores"
+    GRAPH_INDEX     ||--||  GRAPH           : "derived from"
+    DIJKSTRA_RESULT }o--o{  LOCATION        : "path visits"
+```
+
 ### 3.3 Classes and Functions
 
 The system comprises fourteen classes across six packages. The table below summarises each class's primary role and key methods.
@@ -288,6 +333,144 @@ The system comprises fourteen classes across six packages. The table below summa
 | `InspectionSystem` | `app` | Single `main()` entry point | `main(String[])` |
 
 `SortingAlgorithms` and both loader classes (`CandidateLoader`, `GraphLoader`) are non-instantiable utility classes with private constructors, signalling that they contain only static methods and should not be used as objects. `DijkstraResult` and `Edge` are immutable value objects: their fields are `final` and no setters are provided; `DijkstraResult.getPath()` additionally returns a defensive copy of the internal list to prevent external mutation.
+
+The class diagram below captures the full structure of the system. Solid lines with filled diamonds denote composition; dashed arrows with open arrowheads denote dependency (one class creates or calls another); and the dashed line with a hollow triangle denotes interface realisation.
+
+```mermaid
+classDiagram
+    direction TB
+
+    %% ── model ───────────────────────────────────────────────────
+    class Comparable {
+        <<interface>>
+        +compareTo(T) int
+    }
+
+    class Location {
+        -String locationId
+        -int priorityScore
+        +getLocationId() String
+        +getPriorityScore() int
+        +compareTo(Location) int
+        +toString() String
+    }
+
+    class Edge {
+        -String target
+        -int weight
+        +getTarget() String
+        +getWeight() int
+    }
+
+    class Graph {
+        -HashMap~String,List~Edge~~ adjacencyList
+        +addEdge(String, String, int) void
+        +getEdges(String) List~Edge~
+        +getAllLocations() Set~String~
+        +containsLocation(String) boolean
+        +getLocationCount() int
+    }
+
+    class GraphIndex {
+        -String[] idByIndex
+        -int[][] neighborIds
+        -int[][] neighborWeights
+        +fromGraph(Graph) GraphIndex
+        +size() int
+        +idOf(String) int
+        +locationOf(int) String
+        +neighbors(int) int[]
+        +weights(int) int[]
+    }
+
+    class DijkstraResult {
+        -List~String~ path
+        -int totalCost
+        -boolean reachable
+        +getPath() List~String~
+        +getTotalCost() int
+        +isReachable() boolean
+        +getPathString() String
+    }
+
+    %% ── sorting ─────────────────────────────────────────────────
+    class SortingAlgorithms {
+        <<utility>>
+        +bubbleSort(Location[]) void
+        +quickSort(Location[]) void
+        +mergeSort(Location[]) void
+    }
+
+    %% ── graph ───────────────────────────────────────────────────
+    class OptimizedDijkstraAlgorithm {
+        -GraphIndex index
+        -int[] distForward
+        -int[] distBackward
+        -int[] parentForward
+        -int[] parentBackward
+        +findShortestPath(String, String) DijkstraResult
+        -resetSearchState() void
+    }
+
+    %% ── io ──────────────────────────────────────────────────────
+    class CandidateLoader {
+        <<utility>>
+        +load(String) Location[]
+    }
+
+    class GraphLoader {
+        <<utility>>
+        +load(String) Graph
+    }
+
+    class ResultExporter {
+        <<utility>>
+        +exportTop30(Location[][], String) void
+        +exportTimingReport(long[], long[], long[], String) void
+        +exportPathResults(DijkstraResult[], String) void
+        +exportDataAnalysis(String, String) void
+    }
+
+    %% ── analysis ────────────────────────────────────────────────
+    class DataAnalyzer {
+        <<utility>>
+        +analyze(Location[], String) String
+    }
+
+    %% ── app ─────────────────────────────────────────────────────
+    class TaskARunner {
+        -String DATA_DIR
+        -String OUTPUT_DIR
+        +run() Location[][]
+    }
+
+    class TaskBRunner {
+        +run(Location[][]) void
+    }
+
+    class InspectionSystem {
+        +main(String[]) void
+    }
+
+    %% ── relationships ───────────────────────────────────────────
+    Location           ..|>  Comparable               : implements
+    Graph              "1" *--  "0..*" Edge            : contains
+    GraphIndex         ..>   Graph                     : built from
+    OptimizedDijkstraAlgorithm --> GraphIndex          : uses
+    OptimizedDijkstraAlgorithm ..> DijkstraResult      : returns
+    CandidateLoader    ..>   Location                  : creates
+    GraphLoader        ..>   Graph                     : creates
+    TaskARunner        ..>   CandidateLoader           : uses
+    TaskARunner        ..>   SortingAlgorithms         : uses
+    TaskARunner        ..>   DataAnalyzer              : uses
+    TaskARunner        ..>   ResultExporter            : uses
+    TaskBRunner        ..>   GraphLoader               : uses
+    TaskBRunner        ..>   GraphIndex                : builds
+    TaskBRunner        ..>   OptimizedDijkstraAlgorithm : runs
+    TaskBRunner        ..>   ResultExporter            : uses
+    InspectionSystem   -->   TaskARunner               : orchestrates
+    InspectionSystem   -->   TaskBRunner               : orchestrates
+```
 
 ### 3.4 Object-Oriented Design
 
