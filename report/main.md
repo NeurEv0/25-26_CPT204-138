@@ -248,14 +248,7 @@ The table below summarises the complexity of Bidirectional Dijkstra against the 
 
 The Urban Infrastructure Inspection System is organised as a layered package hierarchy under the root namespace `inspection`. Each layer has a single, clearly bounded responsibility and depends only on layers below it, creating a directed dependency graph with no cycles.
 
-```
-inspection.app          ← Entry point & task orchestration
-    ├── inspection.io           ← File I/O (CSV reading and writing)
-    ├── inspection.analysis     ← Dataset analysis utilities
-    ├── inspection.sorting      ← Sorting algorithm implementations
-    └── inspection.graph        ← Graph search algorithms
-            └── inspection.model    ← Core domain objects (no dependencies on other packages)
-```
+![alt text](CPT204_arch.drawio.png)
 
 At runtime, `InspectionSystem.main()` acts as the single entry point and orchestrates two sequential phases. In Phase 1, `TaskARunner.run()` loads the three candidate datasets from CSV files via `CandidateLoader`, times all three sorting algorithms on each dataset, extracts the top 10 locations per dataset, and returns a `Location[3][10]` array directly to the caller. In Phase 2, `TaskBRunner.run(Location[][])` receives that array as a method argument — no intermediate file is re-read — builds the infrastructure graph from `paths.csv` via `GraphLoader`, converts it to an integer-indexed representation via `GraphIndex`, and executes the four prescribed shortest-path cases using `OptimizedDijkstraAlgorithm`. Both phases write output files to the `output/` directory as audit artifacts, but those files are not part of the runtime pipeline.
 
