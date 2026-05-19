@@ -10,11 +10,6 @@ import java.util.List;
 
 /**
  * Consolidates all file-export operations for the inspection system.
- *
- * <p>Previously, export methods were scattered across {@code TaskA.java} and
- * {@code TaskB.java} as private static methods. Gathering them here means that
- * any future change to the output format — column names, file paths, encoding —
- * is made in exactly one place.
  */
 public class ResultExporter {
 
@@ -22,13 +17,6 @@ public class ResultExporter {
         // Utility class — not instantiable.
     }
 
-    /**
-     * Exports the top-10 selected locations from each dataset to a single CSV.
-     *
-     * @param top10s   three-element array: {@code top10s[0]} = Dataset A,
-     *                 {@code top10s[1]} = Dataset B, {@code top10s[2]} = Dataset C
-     * @param filePath destination file path
-     */
     public static void exportTop30(Location[][] top10s, String filePath) {
         ensureParentDirs(filePath);
         String[] labels = {"A", "B", "C"};
@@ -47,14 +35,6 @@ public class ResultExporter {
         }
     }
 
-    /**
-     * Exports per-dataset average sort times (in nanoseconds) to a CSV.
-     *
-     * @param bubbleTimes average Bubble Sort time per dataset (ns)
-     * @param quickTimes  average Quick Sort time per dataset (ns)
-     * @param mergeTimes  average Merge Sort time per dataset (ns)
-     * @param filePath    destination file path
-     */
     public static void exportTimingReport(long[] bubbleTimes,
                                           long[] quickTimes,
                                           long[] mergeTimes,
@@ -73,13 +53,6 @@ public class ResultExporter {
         }
     }
 
-    /**
-     * Exports shortest-path results (formatted text lines) to a plain-text file.
-     *
-     * @param reportLines ordered list of text lines to write
-     * @param algorithmName name of the algorithm used (written in the file header)
-     * @param filePath    destination file path
-     */
     public static void exportPathResults(List<String> reportLines,
                                          String algorithmName,
                                          String filePath) {
@@ -97,12 +70,6 @@ public class ResultExporter {
         }
     }
 
-    /**
-     * Exports the dataset-analysis report to a plain-text file.
-     *
-     * @param content  full text content to write
-     * @param filePath destination file path
-     */
     public static void exportDataAnalysis(String content, String filePath) {
         ensureParentDirs(filePath);
         try (PrintWriter pw = new PrintWriter(new FileWriter(filePath))) {

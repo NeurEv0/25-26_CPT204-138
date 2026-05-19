@@ -14,13 +14,7 @@ public class GraphLoader {
     private GraphLoader() {
         // Utility class — not instantiable.
     }
-
-    /**
-     * Reads {@code filePath} and returns a fully constructed {@link Graph}.
-     *
-     * @param filePath path to the edge-list CSV file (e.g., {@code paths.csv})
-     * @return an undirected weighted {@link Graph} containing all edges in the file
-     */
+    
     public static Graph load(String filePath) {
         Graph graph = new Graph();
 

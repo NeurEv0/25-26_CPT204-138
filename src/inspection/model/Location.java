@@ -2,17 +2,6 @@ package inspection.model;
 
 /**
  * Represents one candidate location from the inspection dataset.
- *
- * <p>The natural ordering defined by {@link #compareTo} encodes both
- * ranking dimensions required by Task A:
- * <ol>
- *   <li>Descending {@code priorityScore} (higher score = higher priority).</li>
- *   <li>Ascending {@code locationId} as a tie-breaker when scores are equal.</li>
- * </ol>
- *
- * <p>All three sorting algorithms in {@link inspection.sorting.SortingAlgorithms}
- * delegate to this single comparison method, guaranteeing a consistent result
- * regardless of which algorithm is chosen.
  */
 public class Location implements Comparable<Location> {
 

@@ -921,12 +921,607 @@ public class OptimizedDijkstraAlgorithm {
         }
     }
 }
-
 ```
 
 #### src\inspection\io\CandidateLoader.java
 
 ```java
+package inspection.io;
+
+import inspection.model.Location;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+/**
+ * Loads a candidate-location CSV file into a {@link Location} array.
+ */
+public class CandidateLoader {
+
+    private CandidateLoader() {
+        // Utility class — not instantiable.
+    }
+    
+    public static Location[] load(String filePath) {
+        int count = countDataLines(filePath);
+        Location[] locations = new Location[count];
+
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            br.readLine(); // skip header
+            String line;
+            int idx = 0;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                String[] parts = line.split(",");
+                String locId = parts[0].trim();
+                int score = Integer.parseInt(parts[1].trim());
+                locations[idx++] = new Location(locId, score);
+            }
+        } catch (IOException e) {
+            System.err.println("[CandidateLoader] Error reading: " + filePath);
+            e.printStackTrace();
+        }
+
+        return locations;
+    }
+
+    /** Two-pass helper: counts non-empty data rows (excluding header). */
+    private static int countDataLines(String filePath) {
+        int count = 0;
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            br.readLine(); // skip header
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (!line.trim().isEmpty()) count++;
+            }
+        } catch (IOException e) {
+            System.err.println("[CandidateLoader] Error counting lines: " + filePath);
+            e.printStackTrace();
+        }
+        return count;
+    }
+}
+
+```
+#### src\inspection\io\GraphLoader.java
+
+```java
+package inspection.io;
+
+import inspection.model.Graph;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+/**
+ * Loads a weighted-edge CSV file into a {@link Graph}.
+ */
+public class GraphLoader {
+
+    private GraphLoader() {
+        // Utility class — not instantiable.
+    }
+    
+    public static Graph load(String filePath) {
+        Graph graph = new Graph();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            br.readLine(); // skip header
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue;
+                String[] parts = line.split(",");
+                if (parts.length < 3) continue;
+                String from = parts[0].trim();
+                String to = parts[1].trim();
+                int weight = Integer.parseInt(parts[2].trim());
+                graph.addEdge(from, to, weight);
+            }
+        } catch (IOException e) {
+            System.err.println("[GraphLoader] Error reading: " + filePath);
+            e.printStackTrace();
+        }
+
+        return graph;
+    }
+}
+
+```
+
+#### src\inspection\io\ResultExporter.java
+
+```java
+package inspection.io;
+
+import inspection.model.Location;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
+
+/**
+ * Consolidates all file-export operations for the inspection system.
+ */
+public class ResultExporter {
+
+    private ResultExporter() {
+        // Utility class — not instantiable.
+    }
+
+    public static void exportTop30(Location[][] top10s, String filePath) {
+        ensureParentDirs(filePath);
+        String[] labels = {"A", "B", "C"};
+        try (PrintWriter pw = new PrintWriter(new FileWriter(filePath))) {
+            pw.println("rank,dataset,location_id,priority_score");
+            for (int d = 0; d < top10s.length; d++) {
+                for (int i = 0; i < top10s[d].length; i++) {
+                    Location loc = top10s[d][i];
+                    pw.println((i + 1) + "," + labels[d] + ","
+                            + loc.getLocationId() + "," + loc.getPriorityScore());
+                }
+            }
+            System.out.println("[Export] Top-30 targets  -> " + filePath);
+        } catch (IOException e) {
+            System.err.println("[ResultExporter] Error writing top-30: " + e.getMessage());
+        }
+    }
+
+    public static void exportTimingReport(long[] bubbleTimes,
+                                          long[] quickTimes,
+                                          long[] mergeTimes,
+                                          String filePath) {
+        ensureParentDirs(filePath);
+        String[] labels = {"A", "B", "C"};
+        try (PrintWriter pw = new PrintWriter(new FileWriter(filePath))) {
+            pw.println("dataset,bubble_sort_ns,quick_sort_ns,merge_sort_ns");
+            for (int d = 0; d < 3; d++) {
+                pw.println(labels[d] + "," + bubbleTimes[d] + ","
+                        + quickTimes[d] + "," + mergeTimes[d]);
+            }
+            System.out.println("[Export] Timing report   -> " + filePath);
+        } catch (IOException e) {
+            System.err.println("[ResultExporter] Error writing timing report: " + e.getMessage());
+        }
+    }
+
+    public static void exportPathResults(List<String> reportLines,
+                                         String algorithmName,
+                                         String filePath) {
+        ensureParentDirs(filePath);
+        try (PrintWriter pw = new PrintWriter(new FileWriter(filePath))) {
+            pw.println("Task B - Shortest Path Results");
+            pw.println("Algorithm: " + algorithmName);
+            pw.println("==============================================");
+            for (String line : reportLines) {
+                pw.println(line);
+            }
+            System.out.println("[Export] Path results    -> " + filePath);
+        } catch (IOException e) {
+            System.err.println("[ResultExporter] Error writing path results: " + e.getMessage());
+        }
+    }
+
+    public static void exportDataAnalysis(String content, String filePath) {
+        ensureParentDirs(filePath);
+        try (PrintWriter pw = new PrintWriter(new FileWriter(filePath))) {
+            pw.print(content);
+            System.out.println("[Export] Data analysis   -> " + filePath);
+        } catch (IOException e) {
+            System.err.println("[ResultExporter] Error writing data analysis: " + e.getMessage());
+        }
+    }
+
+    private static void ensureParentDirs(String filePath) {
+        File parent = new File(filePath).getParentFile();
+        if (parent != null) parent.mkdirs();
+    }
+}
+
+```
+
+#### src\inspection\model\DijkstraResult.java
+
+```java
+package inspection.model;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Immutable result of a single shortest-path query.
+ */
+public class DijkstraResult {
+
+    private final List<String> path;
+    private final int totalCost;
+    private final boolean reachable;
+
+    public DijkstraResult(List<String> path, int totalCost, boolean reachable) {
+        this.path = path;
+        this.totalCost = totalCost;
+        this.reachable = reachable;
+    }
+
+    /** Returns a defensive copy of the path node list. */
+    public List<String> getPath() {
+        return new ArrayList<String>(path);
+    }
+
+    public int getTotalCost() {
+        return totalCost;
+    }
+
+    public boolean isReachable() {
+        return reachable;
+    }
+
+    /** Formats the path as {@code "L0001 -> L0002 -> ..."} for reporting. */
+    public String getPathString() {
+        if (!reachable || path.isEmpty()) {
+            return "No path found";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < path.size(); i++) {
+            sb.append(path.get(i));
+            if (i < path.size() - 1) {
+                sb.append(" -> ");
+            }
+        }
+        return sb.toString();
+    }
+}
+
+```
+
+#### src\inspection\model\Edge.java
+
+```java
+package inspection.model;
+
+/**
+ * An immutable, weighted directed edge in the infrastructure graph.
+ */
+public class Edge {
+
+    private final String target;
+    private final int weight;
+
+    public Edge(String target, int weight) {
+        this.target = target;
+        this.weight = weight;
+    }
+
+    public String getTarget() {
+        return target;
+    }
+
+    public int getWeight() {
+        return weight;
+    }
+
+    @Override
+    public String toString() {
+        return "-> " + target + " (w=" + weight + ")";
+    }
+}
+
+```
+
+#### src\inspection\model\Graph.java
+
+```java
+package inspection.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * Weighted undirected graph representing the urban infrastructure network.
+ */
+public class Graph {
+
+    private final Map<String, List<Edge>> adjacencyList;
+
+    public Graph() {
+        adjacencyList = new HashMap<String, List<Edge>>();
+    }
+
+    /**
+     * Adds an undirected weighted edge between {@code from} and {@code to}.
+     * Both endpoints are registered as nodes even if they have no other edges.
+     */
+    public void addEdge(String from, String to, int weight) {
+        adjacencyList.putIfAbsent(from, new ArrayList<Edge>());
+        adjacencyList.putIfAbsent(to, new ArrayList<Edge>());
+        adjacencyList.get(from).add(new Edge(to, weight));
+        adjacencyList.get(to).add(new Edge(from, weight));
+    }
+
+    /**
+     * Returns the outgoing edges for {@code locationId}, or an empty list if
+     * the location is not present in the graph.
+     */
+    public List<Edge> getEdges(String locationId) {
+        List<Edge> edges = adjacencyList.get(locationId);
+        return edges == null ? new ArrayList<Edge>() : edges;
+    }
+
+    public boolean containsLocation(String locationId) {
+        return adjacencyList.containsKey(locationId);
+    }
+
+    public int getLocationCount() {
+        return adjacencyList.size();
+    }
+
+    /** Returns an unmodifiable view of all location IDs in this graph. */
+    public Set<String> getAllLocations() {
+        return Collections.unmodifiableSet(adjacencyList.keySet());
+    }
+}
+
+```
+
+#### src\inspection\model\GraphIndex.java
+
+```java
+package inspection.model;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Integer-indexed, array-backed view of a {@link Graph}.
+ *
+ * <p>Nodes are sorted lexicographically during construction so that the index
+ * assignment is deterministic across runs.
+ */
+public final class GraphIndex {
+
+    private final String[] idByIndex;
+    private final Map<String, Integer> indexById;
+    private final int[][] neighborIds;
+    private final int[][] neighborWeights;
+
+    private GraphIndex(String[] idByIndex,
+                       Map<String, Integer> indexById,
+                       int[][] neighborIds,
+                       int[][] neighborWeights) {
+        this.idByIndex = idByIndex;
+        this.indexById = indexById;
+        this.neighborIds = neighborIds;
+        this.neighborWeights = neighborWeights;
+    }
+
+    /** Builds a {@code GraphIndex} from a fully constructed {@link Graph}. */
+    public static GraphIndex fromGraph(Graph graph) {
+        List<String> ids = new ArrayList<String>(graph.getAllLocations());
+        ids.sort(String::compareTo);
+
+        int n = ids.size();
+        String[] idByIndex = ids.toArray(new String[0]);
+        Map<String, Integer> indexById = new HashMap<String, Integer>(n * 2);
+        for (int i = 0; i < n; i++) {
+            indexById.put(idByIndex[i], i);
+        }
+
+        int[][] neighborIds = new int[n][];
+        int[][] neighborWeights = new int[n][];
+        for (int i = 0; i < n; i++) {
+            List<Edge> edges = graph.getEdges(idByIndex[i]);
+            int m = edges.size();
+            int[] nIds = new int[m];
+            int[] nWeights = new int[m];
+            for (int j = 0; j < m; j++) {
+                Edge edge = edges.get(j);
+                nIds[j] = indexById.get(edge.getTarget());
+                nWeights[j] = edge.getWeight();
+            }
+            neighborIds[i] = nIds;
+            neighborWeights[i] = nWeights;
+        }
+
+        return new GraphIndex(idByIndex, indexById, neighborIds, neighborWeights);
+    }
+
+    public int size() {
+        return idByIndex.length;
+    }
+
+    /** Returns the integer index for {@code locationId}, or {@code -1} if not found. */
+    public int idOf(String locationId) {
+        Integer id = indexById.get(locationId);
+        return id == null ? -1 : id;
+    }
+
+    public String locationOf(int id) {
+        return idByIndex[id];
+    }
+
+    public int[] neighbors(int id) {
+        return neighborIds[id];
+    }
+
+    public int[] weights(int id) {
+        return neighborWeights[id];
+    }
+}
+
+```
+
+#### src\inspection\model\Location.java
+
+```java
+package inspection.model;
+
+/**
+ * Represents one candidate location from the inspection dataset.
+ */
+public class Location implements Comparable<Location> {
+
+    private final String locationId;
+    private final int priorityScore;
+
+    public Location(String locationId, int priorityScore) {
+        this.locationId = locationId;
+        this.priorityScore = priorityScore;
+    }
+
+    public String getLocationId() {
+        return locationId;
+    }
+
+    public int getPriorityScore() {
+        return priorityScore;
+    }
+
+    /**
+     * Compares two locations using the Task A ranking rule:
+     * descending by priority score, then ascending by location ID.
+     */
+    @Override
+    public int compareTo(Location other) {
+        if (this.priorityScore != other.priorityScore) {
+            return Integer.compare(other.priorityScore, this.priorityScore); // descending
+        }
+        return this.locationId.compareTo(other.locationId); // ascending tie-break
+    }
+
+    @Override
+    public String toString() {
+        return locationId + " (score=" + priorityScore + ")";
+    }
+}
+
+```
+
+#### src\inspection\sorting\SortingAlgorithms.java
+
+```java
+package inspection.sorting;
+
+import inspection.model.Location;
+
+/**
+ * Provides three sorting algorithms — Bubble Sort, Quick Sort, and Merge Sort —
+ * all operating on {@link Location} arrays using the natural ordering defined
+ * by {@link Location#compareTo} (descending priority score, ascending ID tie-break).
+ */
+public class SortingAlgorithms {
+
+    private SortingAlgorithms() {
+        // Utility class — not instantiable.
+    }
+
+    // -------------------------------------------------------------------------
+    // Bubble Sort
+    // -------------------------------------------------------------------------
+
+    public static void bubbleSort(Location[] arr) {
+        int n = arr.length;
+        for (int i = 0; i < n - 1; i++) {
+            boolean swapped = false;
+            for (int j = 0; j < n - 1 - i; j++) {
+                if (arr[j].compareTo(arr[j + 1]) > 0) {
+                    Location temp = arr[j];
+                    arr[j] = arr[j + 1];
+                    arr[j + 1] = temp;
+                    swapped = true;
+                }
+            }
+            if (!swapped) break; // early termination
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Quick Sort
+    // -------------------------------------------------------------------------
+
+    public static void quickSort(Location[] arr) {
+        quickSort(arr, 0, arr.length - 1);
+    }
+
+    private static void quickSort(Location[] arr, int low, int high) {
+        if (low < high) {
+            int pivotIndex = partition(arr, low, high);
+            quickSort(arr, low, pivotIndex - 1);
+            quickSort(arr, pivotIndex + 1, high);
+        }
+    }
+
+    private static int partition(Location[] arr, int low, int high) {
+        Location pivot = arr[low];
+        int left = low + 1;
+        int right = high;
+
+        while (right > left) {
+            while (left <= right && arr[left].compareTo(pivot) <= 0) left++;
+            while (left <= right && arr[right].compareTo(pivot) > 0) right--;
+            if (right > left) {
+                Location temp = arr[left];
+                arr[left] = arr[right];
+                arr[right] = temp;
+            }
+        }
+
+        while (right > low && arr[right].compareTo(pivot) >= 0) right--;
+
+        if (pivot.compareTo(arr[right]) > 0) {
+            arr[low] = arr[right];
+            arr[right] = pivot;
+            return right;
+        }
+        return low;
+    }
+
+    // -------------------------------------------------------------------------
+    // Merge Sort
+    // -------------------------------------------------------------------------
+
+    public static void mergeSort(Location[] arr) {
+        mergeSort(arr, 0, arr.length - 1);
+    }
+
+    private static void mergeSort(Location[] arr, int left, int right) {
+        if (left < right) {
+            int mid = (left + right) / 2;
+            mergeSort(arr, left, mid);
+            mergeSort(arr, mid + 1, right);
+            merge(arr, left, mid, right);
+        }
+    }
+
+    private static void merge(Location[] arr, int left, int mid, int right) {
+        int n1 = mid - left + 1;
+        int n2 = right - mid;
+
+        Location[] leftArr = new Location[n1];
+        Location[] rightArr = new Location[n2];
+        System.arraycopy(arr, left, leftArr, 0, n1);
+        System.arraycopy(arr, mid + 1, rightArr, 0, n2);
+
+        int i = 0, j = 0, k = left;
+        while (i < n1 && j < n2) {
+            if (leftArr[i].compareTo(rightArr[j]) <= 0) {
+                arr[k++] = leftArr[i++];
+            } else {
+                arr[k++] = rightArr[j++];
+            }
+        }
+        while (i < n1) arr[k++] = leftArr[i++];
+        while (j < n2) arr[k++] = rightArr[j++];
+    }
+}
 
 ```
 

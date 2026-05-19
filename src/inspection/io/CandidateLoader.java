@@ -14,14 +14,7 @@ public class CandidateLoader {
     private CandidateLoader() {
         // Utility class — not instantiable.
     }
-
-    /**
-     * Reads {@code filePath} and returns a {@link Location} array in file order.
-     * The header row is skipped; blank lines are ignored.
-     *
-     * @param filePath path to the candidate CSV file
-     * @return array of {@link Location} objects preserving the original row order
-     */
+    
     public static Location[] load(String filePath) {
         int count = countDataLines(filePath);
         Location[] locations = new Location[count];
