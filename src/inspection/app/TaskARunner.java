@@ -10,13 +10,6 @@ import inspection.sorting.SortingAlgorithms;
  * Executes the Task A workflow: loads the three candidate datasets, sorts each
  * one with Bubble Sort, Quick Sort, and Merge Sort, measures average runtimes,
  * and extracts the top 10 highest-priority locations per dataset.
- *
- * <p><b>Key integration point:</b> {@link #run()} returns the selected targets
- * as a {@code Location[][]} directly to the caller — typically
- * {@link InspectionSystem} — so that {@link TaskBRunner} receives live Java
- * objects rather than re-reading an intermediate CSV file. The CSV files are
- * still written as audit artifacts, but they are no longer required for the
- * pipeline to continue.
  */
 public class TaskARunner {
 
@@ -29,11 +22,6 @@ public class TaskARunner {
 
     /**
      * Runs the full Task A workflow.
-     *
-     * @return a 3×10 array: {@code result[0]} = top 10 from Dataset A,
-     *         {@code result[1]} = top 10 from Dataset B,
-     *         {@code result[2]} = top 10 from Dataset C,
-     *         each sub-array sorted by descending priority score.
      */
     public Location[][] run() {
         System.out.println("==============================================");
@@ -96,10 +84,6 @@ public class TaskARunner {
     // Private helpers
     // -------------------------------------------------------------------------
 
-    /**
-     * Runs the specified sorting algorithm {@link #RUNS} times on fresh copies
-     * of {@code original} and returns the average elapsed nanoseconds.
-     */
     private long timeSort(Location[] original, String algorithm) {
         long total = 0;
         for (int run = 0; run < RUNS; run++) {

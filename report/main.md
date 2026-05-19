@@ -315,24 +315,23 @@ The system applies four core OOP principles consistently across its class design
 ## Chapter 4 – Project Reflection (Task D)
 
 ### 4.1 AI-Assisted Planning and Collaboration
+In this project, while adhering to the course's requirement for independent core design completion, AI tools like ChatGPT and Claude provided beneficial assistance. The ways we used them were narrow and deliberate:
+1. At the beginning of the project, we used AI to design the file structure and the to-do list for each team member, which lays the foundation for collaboration using GitHub.
+2. When an unfamiliar error message appeared during development, we used AI to explain what the message meant before deciding how to fix it ourselves; 
+3. When we were unsure about the trade-offs between two design approaches (for example, whether to expose the adjacency list directly from `Graph` or return an unmodifiable view), we asked for a brief explanation of the implications.
+4. We also used AI for grammar checking when finalising the report.
 
-The module introduced JIRA and Trello as AI-empowered project management tools, and while we were aware of their capabilities, our team ultimately chose to use GitHub as our primary collaboration platform. This decision was driven by practicality: both team members were already committing code to the repository, so GitHub's commit history, file diffs, and branch structure provided a natural and automatic record of who worked on what and when. Each commit message was written to describe the change clearly — for example, "Refactor DataAnalyzer to use CandidateLoader instead of its own readCSV" — which served as a lightweight task log without the overhead of maintaining a separate board. Communication between team members happened through WeChat for real-time discussion of design decisions and task handoffs.
-
-We did make use of AI tools during the project, specifically ChatGPT and Claude. The ways we used them were narrow and deliberate: when an unfamiliar error message appeared during development, we used AI to explain what the message meant before deciding how to fix it ourselves; when we were unsure about the trade-offs between two design approaches (for example, whether to expose the adjacency list directly from `Graph` or return an unmodifiable view), we asked for a brief explanation of the implications. We also used AI for grammar checking when finalising the report.
-
-The advantages of using AI tools in this way were real. Getting a plain-language explanation of a stack trace or an API method reduced the time spent searching documentation, letting us focus on the actual design decisions. The disadvantages, however, are equally real. AI explanations can be confident and fluent while being subtly wrong — we encountered a case where an AI-suggested algorithm variant did not behave correctly on edge cases, and the mistake would only have been caught by testing. A more serious risk is passive reliance: if AI answers questions before the student has genuinely worked through the problem, the student loses the opportunity to develop that reasoning ability themselves. Our approach was to use AI for explanation and grammar, not for producing solutions, which we believe kept the intellectual work genuinely ours.
-
-If we were to use a dedicated project management tool in future work, Trello's Kanban structure would suit a small two-person project well — simple columns such as To Do, In Progress, and Done, with one card per feature or report section, would make task handoffs more visible than commit messages alone. JIRA would be more appropriate for a larger team where issue tracking, sprint planning, and reporting become necessary.
+Our team chose to use GitHub as our primary collaboration platform (https://github.com/NeurEv0/25-26_CPT204-138). This decision was driven by practicality: both team members were already committing code to the repository, so GitHub's commit history, file diffs, and branch structure provided a natural and automatic record of who worked on what and when. Each commit message was written to describe the change clearly — for example, "Refactor DataAnalyzer to use CandidateLoader instead of its own readCSV" — which served as a lightweight task log without the overhead of maintaining a separate board. Communication between team members happened through WeChat for real-time discussion of design decisions and task handoffs.
 
 ### 4.2 Equality, Diversity, and Inclusion
 
 Equality, diversity, and inclusion (EDI) in software design means that a system should work fairly and accessibly for all potential users, not just those who happen to resemble the developer. For this project, EDI considerations are relevant both in how the system presents its outputs and in how the underlying data might affect different groups of users if the system were deployed in practice.
 
-At present, the system produces all output through console text and CSV files. This is functional but not accessible: a user who relies on a screen reader would need the console output to be structured in a way compatible with assistive technology, and a user who is not proficient in English would receive location IDs and status messages they may not fully understand. One concrete improvement, as suggested in the task specification, would be to add a text-to-speech layer over the console output, allowing visually impaired operators to receive priority rankings and route results audibly without needing to read a terminal. A second improvement would be to externalise all user-facing strings into a language resource file, making it straightforward to provide Chinese-language output — particularly relevant given the system's context at XJTLU, where operators may prefer to work in either language.
+At present, the system produces all output through console text and CSV files. This is functional but not accessible: a user who relies on a screen reader would need the console output to be structured in a way compatible with assistive technology, and a user who is not proficient in English would receive location IDs and status messages they may not fully understand. One concrete improvement, as suggested in the task specification, would be to add a text-to-speech layer over the console output, allowing visually impaired operators to receive priority rankings and route results audibly without needing to read a terminal.
 
-A subtler EDI concern involves the priority scoring data itself. The system treats priority scores as given and ranks locations mechanically — it does not ask where the scores come from or whether the scoring methodology favours certain districts or communities over others. If the underlying scoring model systematically undervalues infrastructure in lower-income areas, the system would reproduce and reinforce that inequality in inspection planning. A future improvement would be to surface the data source and scoring methodology in the output report, making the prioritisation process auditable and challengeable by a diverse set of stakeholders.
+A more subtle EDI problem involves the prioritization scoring data itself. The system treats priority scores as predetermined values ​​and mechanically ranks locations—it doesn't investigate the source of the scores or whether the scoring methodology favors certain regions or communities. If the underlying scoring model systematically underestimates infrastructure in low-income areas, the system will replicate and reinforce this inequality during audits. Future improvements would involve disclosing data sources and scoring methodologies in output reports, allowing the prioritization process to be audited and challenged by various stakeholders.
 
-Implementing these improvements would not be technically difficult individually, but coordinating them raises real challenges. Text-to-speech requires audio hardware and a suitable Java library, introducing a dependency and platform variability. Providing multi-language support requires careful design so that the output format remains machine-readable (for downstream processing) even when user-facing labels change language. Addressing data bias requires input from domain experts and affected communities — something that goes beyond the software team's capability alone and requires institutional commitment. Recognising these challenges is itself a step toward more responsible software development.
+Implementing these improvements individually is not technically difficult, but coordinating them presents a real challenge. Text-to-speech requires audio hardware and suitable Java libraries, introducing dependencies and platform differences. Providing multilingual support requires careful design to ensure that the output format remains machine-readable (for downstream processing) even if the user-facing tag language changes. Addressing data bias requires the involvement of domain experts and affected communities—something beyond the capabilities of a software team alone; institutional input is also necessary. Recognizing these challenges is itself an important step towards more responsible software development.
 
 ### 4.3 Life-long Learning and Future Improvement
 
@@ -340,32 +339,588 @@ The most instructive lesson from this project was the gap between theoretical co
 
 The second significant lesson came from the refactoring work in Task C. The original code had Task A and Task B as two independent programs with duplicated logic and I/O mixed into domain classes. Restructuring this into a layered `inspection.*` package hierarchy made the codebase significantly easier to reason about and modify. Working through this refactoring made the Single Responsibility Principle feel concrete rather than abstract: the moment `GraphLoader` was separated from `Graph`, it became obvious that changing the CSV format would only require touching one class, not hunting through domain logic for file-reading code.
 
-Within the team, my contribution covered the Task A implementation (the three sorting algorithms, timing harness, dataset analysis, and top-10 selection), the overall package refactoring that integrated Task A and Task B into a single coherent system, and the majority of the report writing. My classmate was responsible for the bidirectional Dijkstra implementation in Task B. The collaboration required us to agree on a shared interface early — specifically that `TaskARunner.run()` would return `Location[][]` — so that the two halves of the system could be connected without either side depending on the other's internal details. Agreeing on this interface in writing, as a method signature, was more effective than describing it informally in a chat message.
-
 If this application were developed further, the most useful next step would be to replace the console-and-CSV interface with a simple web API, so that the inspection planning logic could be called from other systems — for example, a mobile field-worker application or a city dashboard. This would also require more careful error handling and input validation than the current version provides, since the system currently assumes well-formed CSV input and does not gracefully handle missing or malformed rows. A longer-term improvement would be to support incremental graph updates: at present, if new roads are added to the city network, the entire graph must be reloaded from scratch. Supporting dynamic updates would make the system suitable for real-time operational use rather than batch processing alone.
 
 ## Chapter 5 – Program Code
 #### src\inspection\analysis\DataAnalyzer.java
 
 ```java
+package inspection.analysis;
+
+import inspection.io.CandidateLoader;
+import inspection.io.ResultExporter;
+import inspection.model.Location;
+
+/**
+ * Analyses the structural characteristics of a candidate-location dataset.
+ *
+ * <p>Can be used in two ways:
+ * <ol>
+ *   <li><b>Standalone</b> — run {@link #main(String[])} to analyse all three
+ *       datasets and export a report to {@code output/data_analysis_report.txt}.</li>
+ *   <li><b>Integrated</b> — call {@link #analyze(Location[], String)} from
+ *       {@link inspection.app.TaskARunner} to embed per-dataset analysis in the
+ *       sorting workflow output.</li>
+ * </ol>
+ */
+public class DataAnalyzer {
+
+    private static final String DATA_DIR = "Group Project Datasets";
+    private static final String OUTPUT_DIR = "output";
+    private static final String[] DATASETS =
+            {"candidates_A.csv", "candidates_B.csv", "candidates_C.csv"};
+
+    /** Standalone entry point: analyses all three datasets and exports a report. */
+    public static void main(String[] args) {
+        StringBuilder report = new StringBuilder();
+        report.append("==============================================\n");
+        report.append("  Data Characteristics Analysis\n");
+        report.append("==============================================\n\n");
+
+        for (int d = 0; d < DATASETS.length; d++) {
+            String filePath = DATA_DIR + "/" + DATASETS[d];
+            Location[] data = CandidateLoader.load(filePath);
+            String datasetName = "Dataset " + (char) ('A' + d) + ": " + DATASETS[d];
+            report.append("──────────────────────────────────────────────\n");
+            report.append("  ").append(datasetName).append("\n");
+            report.append("──────────────────────────────────────────────\n");
+            report.append(analyze(data, datasetName));
+            report.append("\n");
+        }
+
+        System.out.print(report);
+        ResultExporter.exportDataAnalysis(report.toString(),
+                OUTPUT_DIR + "/data_analysis_report.txt");
+    }
+
+    /**
+     * Analyses {@code data} and returns a formatted multi-line report string.
+     *
+     * @param data        pre-loaded array in original file order
+     * @param datasetName label used in the report header
+     * @return formatted analysis text (does not include the section header)
+     */
+    public static String analyze(Location[] data, String datasetName) {
+        StringBuilder sb = new StringBuilder();
+        int n = data.length;
+
+        // ---- Basic Statistics ----
+        int minScore = Integer.MAX_VALUE, maxScore = Integer.MIN_VALUE;
+        long sum = 0;
+        int minId = Integer.MAX_VALUE, maxId = Integer.MIN_VALUE;
+
+        for (Location loc : data) {
+            int score = loc.getPriorityScore();
+            if (score < minScore) minScore = score;
+            if (score > maxScore) maxScore = score;
+            sum += score;
+            int id = extractIdNumber(loc.getLocationId());
+            if (id < minId) minId = id;
+            if (id > maxId) maxId = id;
+        }
+
+        double mean = (double) sum / n;
+        sb.append("  Basic Statistics:\n");
+        sb.append("    Total locations : ").append(n).append("\n");
+        sb.append("    Score range      : ").append(minScore).append(" ~ ").append(maxScore).append("\n");
+        sb.append("    Mean score       : ").append(String.format("%.2f", mean)).append("\n");
+        sb.append("    Location ID range: L").append(String.format("%04d", minId))
+          .append(" ~ L").append(String.format("%04d", maxId)).append("\n");
+
+        // ---- Score Distribution ----
+        int[] scoreFreq = new int[maxScore - minScore + 1];
+        for (Location loc : data) {
+            scoreFreq[loc.getPriorityScore() - minScore]++;
+        }
+        int uniqueScores = 0, maxFreq = 0, maxFreqScore = 0;
+        for (int i = 0; i < scoreFreq.length; i++) {
+            if (scoreFreq[i] > 0) uniqueScores++;
+            if (scoreFreq[i] > maxFreq) {
+                maxFreq = scoreFreq[i];
+                maxFreqScore = i + minScore;
+            }
+        }
+        sb.append("    Unique scores    : ").append(uniqueScores).append("\n");
+        sb.append("    Most frequent    : score ").append(maxFreqScore)
+          .append(" appears ").append(maxFreq).append(" times\n");
+
+        // ---- Initial Order Analysis ----
+        int descViolations = 0, ascViolations = 0;
+        for (int i = 0; i < n - 1; i++) {
+            int curr = data[i].getPriorityScore();
+            int next = data[i + 1].getPriorityScore();
+            if (curr < next) descViolations++;
+            if (curr > next) ascViolations++;
+        }
+        double descSortedness = (1.0 - (double) descViolations / (n - 1)) * 100;
+        double ascSortedness  = (1.0 - (double) ascViolations  / (n - 1)) * 100;
+
+        sb.append("\n  Initial Order Analysis:\n");
+        sb.append("    Descending order : ").append(String.format("%.1f%%", descSortedness))
+          .append(" sorted (").append(descViolations).append(" violations)\n");
+        sb.append("    Ascending order  : ").append(String.format("%.1f%%", ascSortedness))
+          .append(" sorted (").append(ascViolations).append(" violations)\n");
+
+        int sampleSize = Math.min(n, 200);
+        long inversions = countInversionsSample(data, sampleSize);
+        long maxPossible = (long) sampleSize * (sampleSize - 1) / 2;
+        double inversionDensity = (double) inversions / maxPossible * 100;
+        sb.append("    Inversions (first ").append(sampleSize).append("): ").append(inversions)
+          .append(" (").append(String.format("%.1f%%", inversionDensity)).append(" of max)\n");
+
+        String orderType;
+        if (descSortedness > 95) orderType = "NEARLY SORTED DESCENDING";
+        else if (descSortedness > 70) orderType = "PARTIALLY SORTED DESCENDING";
+        else if (inversionDensity > 40) orderType = "RANDOM / UNSORTED";
+        else orderType = "PARTIALLY SORTED";
+        sb.append("    Classification  : ").append(orderType).append("\n");
+
+        // ---- Tie Analysis ----
+        int totalTies = 0, tieGroups = 0;
+        for (int freq : scoreFreq) {
+            if (freq > 1) { totalTies += freq; tieGroups++; }
+        }
+        sb.append("\n  Tie Analysis:\n");
+        sb.append("    Score groups with ties   : ").append(tieGroups).append("\n");
+        sb.append("    Locations sharing a score: ").append(totalTies)
+          .append(" (").append(String.format("%.1f%%", (double) totalTies / n * 100)).append(")\n");
+
+        return sb.toString();
+    }
+
+    /** Counts inversions in a sample using O(n²) brute force. */
+    private static long countInversionsSample(Location[] data, int sampleSize) {
+        long inversions = 0;
+        for (int i = 0; i < sampleSize; i++) {
+            for (int j = i + 1; j < sampleSize; j++) {
+                if (data[i].compareTo(data[j]) > 0) inversions++;
+            }
+        }
+        return inversions;
+    }
+
+    private static int extractIdNumber(String locationId) {
+        return Integer.parseInt(locationId.substring(1));
+    }
+}
 
 ```
 
 #### src\inspection\app\InspectionSystem.java
 
 ```java
+package inspection.app;
+
+import inspection.model.Location;
+
+/**
+ * Entry point for the Urban Infrastructure Inspection System.
+ */
+public class InspectionSystem {
+
+    public static void main(String[] args) {
+        printBanner();
+
+        // ── Phase 1: Sorting & Candidate Selection ────────────────────────────
+        TaskARunner taskA = new TaskARunner();
+        Location[][] topTargets = taskA.run();
+
+        // ── Phase 2: Graph Construction & Route Planning ──────────────────────
+        TaskBRunner taskB = new TaskBRunner();
+        taskB.run(topTargets);
+
+        System.out.println("==============================================");
+        System.out.println("  Inspection system workflow complete.");
+        System.out.println("  Output files written to: output/");
+        System.out.println("==============================================");
+    }
+
+    private static void printBanner() {
+        System.out.println("==============================================");
+        System.out.println("  Urban Infrastructure Inspection System");
+        System.out.println("  CPT204 Group Project – AY2526");
+        System.out.println("==============================================");
+        System.out.println();
+        System.out.println("  Phase 1 : Candidate Selection   (Task A)");
+        System.out.println("  Phase 2 : Route Planning        (Task B)");
+        System.out.println();
+    }
+}
 
 ```
 
 #### src\inspection\app\TaskARunner.java
 
 ```java
+package inspection.app;
+
+import inspection.analysis.DataAnalyzer;
+import inspection.io.CandidateLoader;
+import inspection.io.ResultExporter;
+import inspection.model.Location;
+import inspection.sorting.SortingAlgorithms;
+
+/**
+ * Executes the Task A workflow: loads the three candidate datasets, sorts each
+ * one with Bubble Sort, Quick Sort, and Merge Sort, measures average runtimes,
+ * and extracts the top 10 highest-priority locations per dataset.
+ */
+public class TaskARunner {
+
+    private static final String DATA_DIR = "Group Project Datasets";
+    private static final String OUTPUT_DIR = "output";
+    private static final String[] DATASET_FILES = {
+            "candidates_A.csv", "candidates_B.csv", "candidates_C.csv"
+    };
+    private static final int RUNS = 3;  // timing runs per algorithm per dataset
+
+    /**
+     * Runs the full Task A workflow.
+     */
+    public Location[][] run() {
+        System.out.println("==============================================");
+        System.out.println("  Task A – Sorting Algorithm Evaluation");
+        System.out.println("==============================================\n");
+
+        long[] bubbleTimes = new long[3];
+        long[] quickTimes  = new long[3];
+        long[] mergeTimes  = new long[3];
+        Location[][] top10s = new Location[3][10];
+
+        for (int d = 0; d < DATASET_FILES.length; d++) {
+            String filePath = DATA_DIR + "/" + DATASET_FILES[d];
+            String datasetLabel = "Dataset " + (char) ('A' + d);
+
+            // Load original data once; copies are made before each sort
+            Location[] originalData = CandidateLoader.load(filePath);
+            System.out.printf("[%s] Loaded %d locations from %s%n",
+                    datasetLabel, originalData.length, DATASET_FILES[d]);
+
+            // Optional: embed dataset characteristics analysis
+            System.out.println(DataAnalyzer.analyze(originalData, datasetLabel));
+
+            // Time each algorithm (3 runs, report average)
+            bubbleTimes[d] = timeSort(originalData, "Bubble");
+            quickTimes[d]  = timeSort(originalData, "Quick");
+            mergeTimes[d]  = timeSort(originalData, "Merge");
+
+            System.out.printf("  %-12s  Bubble: %-18s  Quick: %-18s  Merge: %s%n",
+                    datasetLabel,
+                    formatTime(bubbleTimes[d]),
+                    formatTime(quickTimes[d]),
+                    formatTime(mergeTimes[d]));
+
+            // Extract top 10 using Quick Sort on a fresh copy
+            Location[] sorted = copyArray(originalData);
+            SortingAlgorithms.quickSort(sorted);
+            System.arraycopy(sorted, 0, top10s[d], 0, 10);
+
+            System.out.println("  Top 10 selected locations:");
+            for (int i = 0; i < 10; i++) {
+                System.out.printf("    %2d. %s (score: %d)%n",
+                        i + 1,
+                        top10s[d][i].getLocationId(),
+                        top10s[d][i].getPriorityScore());
+            }
+            System.out.println();
+        }
+
+        // Export timing and selection results as audit files
+        ResultExporter.exportTop30(top10s, OUTPUT_DIR + "/taskA_top30_targets.csv");
+        ResultExporter.exportTimingReport(bubbleTimes, quickTimes, mergeTimes,
+                OUTPUT_DIR + "/taskA_timing_report.csv");
+
+        System.out.println();
+        return top10s;
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    private long timeSort(Location[] original, String algorithm) {
+        long total = 0;
+        for (int run = 0; run < RUNS; run++) {
+            Location[] copy = copyArray(original);
+            long start = System.nanoTime();
+            switch (algorithm) {
+                case "Bubble": SortingAlgorithms.bubbleSort(copy); break;
+                case "Quick":  SortingAlgorithms.quickSort(copy);  break;
+                case "Merge":  SortingAlgorithms.mergeSort(copy);  break;
+            }
+            total += System.nanoTime() - start;
+
+            // Verify sort correctness on the last run
+            if (run == RUNS - 1) {
+                verifySorted(copy, algorithm);
+            }
+        }
+        return total / RUNS;
+    }
+
+    /** Asserts that {@code arr} is fully sorted; prints a warning otherwise. */
+    private void verifySorted(Location[] arr, String algorithm) {
+        for (int i = 0; i < arr.length - 1; i++) {
+            if (arr[i].compareTo(arr[i + 1]) > 0) {
+                System.err.printf("  WARNING: %s sort produced an incorrect result!%n", algorithm);
+                return;
+            }
+        }
+    }
+
+    private Location[] copyArray(Location[] src) {
+        Location[] dest = new Location[src.length];
+        System.arraycopy(src, 0, dest, 0, src.length);
+        return dest;
+    }
+
+    private String formatTime(long nanos) {
+        if (nanos < 1_000_000L) {
+            return String.format("%,d ns", nanos);
+        } else if (nanos < 1_000_000_000L) {
+            return String.format("%.3f ms", nanos / 1_000_000.0);
+        } else {
+            return String.format("%.3f s", nanos / 1_000_000_000.0);
+        }
+    }
+}
 
 ```
 
 #### src\inspection\graph\OptimizedDijkstraAlgorithm.java
 
 ```java
+package inspection.graph;
+
+import inspection.model.DijkstraResult;
+import inspection.model.GraphIndex;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.PriorityQueue;
+
+/**
+ * Bidirectional Dijkstra's algorithm for shortest-path queries on the infrastructure graph.
+ */
+public class OptimizedDijkstraAlgorithm {
+
+    private static final int INF = Integer.MAX_VALUE / 4;
+
+    private final GraphIndex index;
+    private final int[] distForward;
+    private final int[] distBackward;
+    private final int[] parentForward;
+    private final int[] parentBackward;
+    private final PriorityQueue<HeapNode> forwardQueue;
+    private final PriorityQueue<HeapNode> backwardQueue;
+
+    public OptimizedDijkstraAlgorithm(GraphIndex index) {
+        int n = index.size();
+        this.index = index;
+        this.distForward = new int[n];
+        this.distBackward = new int[n];
+        this.parentForward = new int[n];
+        this.parentBackward = new int[n];
+        this.forwardQueue = new PriorityQueue<HeapNode>();
+        this.backwardQueue = new PriorityQueue<HeapNode>();
+    }
+
+    /**
+     * Finds the shortest path from {@code start} to {@code destination}.
+     *
+     * @param start       location ID of the source node
+     * @param destination location ID of the target node
+     * @return a {@link DijkstraResult} containing the path and total cost,
+     *         or an unreachable result if no path exists
+     */
+    public DijkstraResult findShortestPath(String start, String destination) {
+        int startId = index.idOf(start);
+        int destId = index.idOf(destination);
+
+        if (startId < 0 || destId < 0) {
+            return new DijkstraResult(new ArrayList<String>(), INF, false);
+        }
+
+        // Trivial case: source == destination (e.g., Case 1 in Task B)
+        if (startId == destId) {
+            List<String> path = new ArrayList<String>();
+            path.add(start);
+            return new DijkstraResult(path, 0, true);
+        }
+
+        resetSearchState();
+
+        distForward[startId] = 0;
+        distBackward[destId] = 0;
+        parentForward[startId] = startId;
+        parentBackward[destId] = destId;
+        forwardQueue.add(new HeapNode(startId, 0));
+        backwardQueue.add(new HeapNode(destId, 0));
+
+        int bestDistance = INF;
+        int meetingPoint = -1;
+
+        while (!forwardQueue.isEmpty() && !backwardQueue.isEmpty()) {
+            int forwardBest = forwardQueue.peek().distance;
+            int backwardBest = backwardQueue.peek().distance;
+            // Termination criterion: if the sum of the two frontier heads
+            // already exceeds the best known path, no improvement is possible.
+            if ((long) forwardBest + (long) backwardBest >= bestDistance) {
+                break;
+            }
+
+            if (forwardBest <= backwardBest) {
+                MeetingUpdate update = expandFrontier(
+                        forwardQueue, distForward, distBackward, parentForward, true);
+                if (update.meetingPoint >= 0 && update.totalDistance < bestDistance) {
+                    bestDistance = update.totalDistance;
+                    meetingPoint = update.meetingPoint;
+                }
+            } else {
+                MeetingUpdate update = expandFrontier(
+                        backwardQueue, distBackward, distForward, parentBackward, false);
+                if (update.meetingPoint >= 0 && update.totalDistance < bestDistance) {
+                    bestDistance = update.totalDistance;
+                    meetingPoint = update.meetingPoint;
+                }
+            }
+        }
+
+        if (meetingPoint < 0) {
+            return new DijkstraResult(new ArrayList<String>(), INF, false);
+        }
+
+        List<String> path = buildPath(startId, destId, meetingPoint);
+        return new DijkstraResult(path, bestDistance, true);
+    }
+
+    private void resetSearchState() {
+        Arrays.fill(distForward, INF);
+        Arrays.fill(distBackward, INF);
+        Arrays.fill(parentForward, -1);
+        Arrays.fill(parentBackward, -1);
+        forwardQueue.clear();
+        backwardQueue.clear();
+    }
+
+    private MeetingUpdate expandFrontier(PriorityQueue<HeapNode> queue,
+                                          int[] ownDistances,
+                                          int[] oppositeDistances,
+                                          int[] previous,
+                                          boolean isForward) {
+        HeapNode current;
+        do {
+            if (queue.isEmpty()) return MeetingUpdate.none();
+            current = queue.poll();
+        } while (current.distance > ownDistances[current.nodeId]); // skip stale entries
+
+        int meetingPoint = -1;
+        int bestTotal = INF;
+
+        // Check if the opposite frontier has already reached this node
+        int oppositeAtCurrent = oppositeDistances[current.nodeId];
+        if (oppositeAtCurrent < INF) {
+            long total = (long) current.distance + (long) oppositeAtCurrent;
+            if (total < bestTotal) {
+                bestTotal = (int) total;
+                meetingPoint = current.nodeId;
+            }
+        }
+
+        int[] neighbors = index.neighbors(current.nodeId);
+        int[] weights = index.weights(current.nodeId);
+        for (int i = 0; i < neighbors.length; i++) {
+            int neighborId = neighbors[i];
+            int newDistance = current.distance + weights[i];
+            if (newDistance >= ownDistances[neighborId]) continue;
+
+            ownDistances[neighborId] = newDistance;
+            previous[neighborId] = current.nodeId;
+            queue.add(new HeapNode(neighborId, newDistance));
+
+            int oppositeAtNeighbor = oppositeDistances[neighborId];
+            if (oppositeAtNeighbor < INF) {
+                long total = (long) newDistance + (long) oppositeAtNeighbor;
+                if (total < bestTotal) {
+                    bestTotal = (int) total;
+                    meetingPoint = neighborId;
+                }
+            }
+        }
+
+        return new MeetingUpdate(meetingPoint, bestTotal);
+    }
+
+    private List<String> buildPath(int startId, int destId, int meetingPoint) {
+        List<String> path = new ArrayList<String>();
+
+        // Trace forward parent chain from meetingPoint back to start
+        int current = meetingPoint;
+        while (current != startId) {
+            path.add(index.locationOf(current));
+            current = parentForward[current];
+            if (current < 0) return new ArrayList<String>();
+        }
+        path.add(index.locationOf(startId));
+        reverseInPlace(path);
+
+        // Trace backward parent chain from meetingPoint forward to dest
+        current = meetingPoint;
+        int next = parentBackward[current];
+        while (next != destId) {
+            if (next < 0) return new ArrayList<String>();
+            path.add(index.locationOf(next));
+            current = next;
+            next = parentBackward[current];
+        }
+        path.add(index.locationOf(destId));
+
+        return path;
+    }
+
+    private static void reverseInPlace(List<String> list) {
+        for (int i = 0, j = list.size() - 1; i < j; i++, j--) {
+            String tmp = list.get(i);
+            list.set(i, list.get(j));
+            list.set(j, tmp);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helper value types
+    // -------------------------------------------------------------------------
+
+    private static final class HeapNode implements Comparable<HeapNode> {
+        private final int nodeId;
+        private final int distance;
+
+        private HeapNode(int nodeId, int distance) {
+            this.nodeId = nodeId;
+            this.distance = distance;
+        }
+
+        @Override
+        public int compareTo(HeapNode other) {
+            int cmp = Integer.compare(this.distance, other.distance);
+            return cmp != 0 ? cmp : Integer.compare(this.nodeId, other.nodeId);
+        }
+    }
+
+    private static final class MeetingUpdate {
+        private final int meetingPoint;
+        private final int totalDistance;
+
+        private MeetingUpdate(int meetingPoint, int totalDistance) {
+            this.meetingPoint = meetingPoint;
+            this.totalDistance = totalDistance;
+        }
+
+        private static MeetingUpdate none() {
+            return new MeetingUpdate(-1, INF);
+        }
+    }
+}
 
 ```
 
@@ -376,10 +931,22 @@ If this application were developed further, the most useful next step would be t
 ```
 
 ## Chapter 6 – Appendix
+### 6.1 Dataset Analyze output for each dataset
+#### Dataset A
+![alt text](image.png)
+#### Dataset B
+![alt text](image-1.png)
+#### Dataset C
+![alt text](image-2.png)
 
+### 6.2 Task A timing report
+![alt text](image-3.png)
+
+### 6.3 Task B shortest paths
+![alt text](image-4.png)
 
 ## Chapter 7 – Contribution Form
 | Student ID | Contribution |
 | --- | --- |
 | 2362457 | 50% |
-| | 50% |
+| 2362404 | 50% |
